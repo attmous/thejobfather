@@ -8,6 +8,13 @@ the hackathon window.
 
 ## 1. Proposed architecture
 
+Current local increment: Profile, Job, Session chat/call, and Application are
+implemented. Application uses saved profile/job snapshots, background drafting,
+deterministic source checks plus a separate Gemini consistency review, durable
+versions, text letter revisions, and ReportLab PDFs. Spoken document actions,
+owner sign-in, and deployment remain later increments. SQLite currently uses the
+standard Python driver, with explicit transactions for approvals and versioning.
+
 Keep one repository and two runtime processes:
 
 ```text
@@ -25,8 +32,9 @@ Browser / Next.js
   validation, persistence, and PDFs.
 - **Gemini Live:** full-duplex speech, interruption events, visual screen context,
   and typed action proposals.
-- **Gemini text model:** deterministic JSON extraction, drafting, requirement
-  matching, and consistency review.
+- **Gemini text model:** structured profile and job extraction, text chat,
+  fact proposals, drafting, revisions, requirement matching, and consistency
+  review. Load `GEMINI_API_KEY` in the backend.
 - **SQLite / SQLAlchemy:** approved state and document versions.
 - **Codesphere:** HTTPS ingress, secret environment variables, and persistent data
   volume.
@@ -92,9 +100,10 @@ contract tests pass.
 
 ### Phase 2 — profile evidence and approval (1:40–2:50)
 
-1. Add bounded PDF upload and `pypdf` text extraction with page locators.
-2. Add pasted resume text fallback.
-3. Ask the text model for claim proposals in a strict schema.
+1. Validate PDF size, page count, and encryption with `pypdf`.
+2. Send the PDF or pasted resume text to Gemini.
+3. Validate Gemini’s response against the profile schema before returning an
+   editable draft. Keep imports separate from profile saves.
 4. Prefill editable Profile fields from the extraction and confirm them
    together with Save and continue.
 5. Implement optimistic profile version checks and a single transaction that

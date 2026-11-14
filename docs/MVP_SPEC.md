@@ -25,7 +25,7 @@ The MVP is successful when one person can complete this vertical slice in a
 hosted build:
 
 1. Sign in with the installation's owner password.
-2. Upload one text-based resume PDF or paste resume text.
+2. Upload a resume PDF or paste resume text for Gemini to read.
 3. Check the details filled from the resume and save the profile.
 4. Import a job link or paste the job description, then confirm the details.
 5. Choose text chat or a call. On a call, speak, interrupt the agent, and
@@ -49,11 +49,13 @@ The application flow has four screens. Use these labels in navigation and page
 headings.
 
 1. **Profile**. Upload a PDF and check the prefilled name, role, summary,
-   recent experience, and skills. Offer pasted text if the PDF cannot be read.
+   recent experience, and skills. Gemini extracts the fields from the PDF or
+   pasted text. Offer pasted text if the PDF cannot be read.
    **Save and continue** confirms the edited profile in one action.
 2. **Job**. Put the job link first, with **Import job** as the primary
-   action. Show editable role, company, and description after a successful
-   import. **Paste job description** is available if a link fails or the user
+   action. Show the role, company, formatted description, and skills after
+   import. **Edit details** lets the user change all four fields.
+   **Paste job description** is available if a link fails or the user
    already has the text. **Start session** confirms the job.
 3. **Session**. Default to **Chat**, with **Call** beside it. Ask questions
    in the conversation itself. The call includes microphone controls, optional
@@ -90,8 +92,9 @@ Within Session, the primary loop is:
 
 #### Career evidence
 
-- Upload one text-based resume PDF, maximum 10 MB.
-- Pasted-text fallback for scanned, encrypted, or failed PDFs.
+- Upload one resume PDF, maximum 10 MB. Send it directly to Gemini for
+  structured profile extraction.
+- Use the same Gemini extraction for pasted resume text.
 - Extract structured proposals for experience, education, skills, projects,
   and achievements.
 - Every proposal includes its source and a short evidence excerpt.
@@ -215,8 +218,12 @@ Within Session, the primary loop is:
    approved profile and job versions.
 7. **Previous good work survives failure.** Failed generations and revisions do
    not overwrite the last successful version.
-8. **Secrets stay server-side.** The permanent Gemini key is never shipped in the
-   frontend bundle.
+8. **Gemini handles agent tasks.** Configure the backend with
+   `GEMINI_API_KEY` for profile and job extraction, chat, fact proposals,
+   drafting, fit analysis, revisions, and Gemini Live. Use separate model
+   settings for text and voice. Keep the permanent key on the server.
+   Settings can save, replace, or remove the local key and only returns its
+   status. Require owner sign-in for Settings in the hosted build.
 
 ## 7. Minimal data model
 
