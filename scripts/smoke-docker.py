@@ -53,7 +53,8 @@ try:
     saved = request("/api/profile", {"version": 0, "details": {
         "name": "Docker Smoke Test", "role": "Engineer", "skills": "Python"}})
     check(saved["version"] == 1, "profile can be written through the proxy")
-    request("/api/settings/gemini", {"api_key": "test-key-for-storage-only"})
+    check(request("/api/settings/gemini", {"api_key": "AQ.test-key-for-storage-only"}) == {"source": "app"},
+          "authorization-format key saves through the frontend proxy")
     try:
         request("/api/settings/gemini", {"api_key": "test-key-for-storage-only"}, origin="https://untrusted.example")
         raise AssertionError("cross-origin key changes were accepted")

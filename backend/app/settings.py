@@ -39,8 +39,9 @@ class SaveGeminiKey(BaseModel):
     @classmethod
     def check_key(cls, secret: SecretStr) -> SecretStr:
         key = secret.get_secret_value().strip()
+        # Gemini authorization keys use an AQ. prefix; preserve the dot.
         if not 16 <= len(key) <= 256 or not all(
-            char.isascii() and (char.isalnum() or char in "-_") for char in key
+            char.isascii() and (char.isalnum() or char in "-_.") for char in key
         ):
             raise ValueError("Enter a Gemini API key.")
         return SecretStr(key)
