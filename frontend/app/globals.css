@@ -310,3 +310,36 @@ textarea { resize: vertical; }
   .revision-fields { grid-template-columns: minmax(0, 1fr); }
   .fit-heading { flex-direction: column; gap: 6px; }
 }
+
+.workflow-stack { display: grid; gap: 14px; }
+.workflow-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.workflow-row > div { min-width: 0; }
+.workflow-rows, .interview-topics { list-style: none; margin: 0; padding: 0; }
+.workflow-rows > li { padding-block: 11px; overflow-wrap: anywhere; }
+.workflow-rows > li + li { border-top: 1px solid var(--line); }
+.evidence-preview { padding: 12px; background: var(--soft); overflow-wrap: anywhere; }
+.evidence-preview h3, .draft-employment h4 { margin: 0 0 5px; }
+.fit-comparison { display: grid; gap: 10px; background: var(--soft); padding: 15px; }
+.fit-scores { display: flex; flex-wrap: wrap; gap: 18px 48px; }
+.fit-scores > div { display: grid; color: var(--muted); }
+.fit-scores strong { font-size: 34px; letter-spacing: -.055em; font-weight: 500; color: var(--ink); }
+.fit-scores > div + div strong { color: var(--accent); }
+.fit-scores small { font-size: 13px; color: var(--muted); letter-spacing: normal; }
+.fit-rubric table { width: 100%; border-collapse: collapse; margin-block-start: 6px; }
+.fit-rubric th, .fit-rubric td { text-align: start; padding: 5px; border-bottom: 1px solid var(--line); }
+.fit-rubric :is(th, td):not(:first-child) { text-align: end; }
+.interview-topics { display: grid; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); gap: 6px; }
+.interview-topics li { display: grid; gap: 2px; padding: 8px; background: var(--soft); border-left: 2px solid transparent; }
+.interview-topics li[aria-current] { border-left-color: var(--accent); }
+.interview-topics small { color: var(--muted); }
+.draft-tabs { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.draft-contact { overflow-wrap: anywhere; color: var(--muted); }
+.draft-employment + .draft-employment { margin-top: 14px; }
+@media (max-width: 460px) {
+  .draft-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .draft-tabs .button:nth-child(n+3) { border-top: 1px solid var(--line); }
+}
+.text-model-settings { border-top: 1px solid var(--line); }
+.text-model-settings h3 { margin: 0 0 5px; }
+.text-model-settings form { margin-top: 12px; }
+.settings-dialog { overflow: auto; }

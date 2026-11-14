@@ -15,14 +15,15 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import JSONResponse, Response
 
 from .profile import (
-    MAX_TEXT, Profile, ProfileDetails, ProfileLinks, ProfileSources, ResumeSource,
+    MAX_TEXT, ApprovedEvidence, Profile, ProfileDetails, ProfileLinks, ProfileSources, ResumeSource,
     connect, initialize, read_profile, read_profile_from, save_profile,
 )
 from .gemini import GeminiError
+from .fit import initialize_fit
 from .application import initialize_application, router as application_router
 from .job import initialize_job, router as job_router
 from .live import router as live_router
-from .resume import extract_resume_pdf, extract_resume_text
+from .resume import extract_resume_pdf, extract_resume_text, read_docx, read_pdf_text
 from .session import initialize_session, keep_approved_facts, router as session_router
 from .settings import router as settings_router
 
@@ -36,6 +37,7 @@ async def lifespan(_: FastAPI):
     initialize_job()
     initialize_session()
     initialize_application()
+    initialize_fit()
     yield
 
 
@@ -68,13 +70,13 @@ async def gemini_error(_: Request, error: GeminiError):
 @app.middleware("http")
 async def local_requests(request: Request, call_next):
     origin = request.headers.get("origin")
-    settings_write = request.url.path.rstrip("/") == "/api/settings/gemini"
+    settings_write = request.url.path.rstrip("/").startswith("/api/settings/")
     if request.method not in ("GET", "HEAD", "OPTIONS") and (origin or settings_write) and origin not in APP_ORIGINS:
         return JSONResponse({"detail": "Request must come from the app."}, status_code=403)
-    if request.url.path in ("/api/profile/import/pdf", "/api/profile/sources/pdf"):
+    if request.url.path in ("/api/profile/import/pdf", "/api/profile/sources/pdf", "/api/profile/sources/docx", "/api/profile/evidence/linkedin/pdf"):
         size = request.headers.get("content-length")
         if size and size.isdecimal() and int(size) > MAX_PDF_BYTES:
-            return JSONResponse({"detail": "Choose a PDF up to 10 MB."}, status_code=413)
+            return JSONResponse({"detail": "Choose a file up to 10 MB."}, status_code=413)
     response = await call_next(request)
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -84,6 +86,8 @@ async def local_requests(request: Request, call_next):
 async def validation_error(request: Request, error: RequestValidationError):
     if request.url.path.rstrip("/") == "/api/settings/gemini":
         return JSONResponse({"detail": "Enter a Gemini API key."}, status_code=422)
+    if request.url.path.rstrip("/") == "/api/settings/text":
+        return JSONResponse({"detail": "Check the provider, model ID, and API key."}, status_code=422)
     if request.url.path == "/api/job/import/link":
         return JSONResponse({"detail": "Enter a public job link."}, status_code=422)
     if request.url.path == "/api/profile/sources":
@@ -152,10 +156,11 @@ def save_sources(
     if imported:
         if not imported.details.name:
             raise HTTPException(422, "Couldn’t find your name in the resume. Include it and try again.")
+        updated.resume_details = imported.details
         updated.details = keep_approved_facts(current, imported.details)
         updated.resume = imported.resume
     elif not current.version:
-        raise HTTPException(422, "Upload a PDF or paste your resume text.")
+        raise HTTPException(422, "Upload a PDF or DOCX, or paste your resume text.")
     elif updated == current:
         return current
 
@@ -176,13 +181,27 @@ def save_profile_sources(inputs: ProfileSources):
 
 @app.put("/api/profile/sources/pdf", response_model=Profile)
 async def save_profile_pdf(request: Request):
+    return await save_resume_upload(request, "pdf")
+
+
+@app.put("/api/profile/sources/docx", response_model=Profile)
+async def save_profile_docx(request: Request):
+    return await save_resume_upload(request, "docx")
+
+
+async def save_resume_upload(request: Request, kind: str):
     try:
         links = ProfileLinks.model_validate_json(unquote(request.headers.get("x-profile-sources", "")))
     except ValidationError as error:
         raise HTTPException(422, profile_input_error(error)) from None
     current = await run_in_threadpool(current_profile_for, links)
-    contents, label = await read_pdf_upload(request)
-    imported = await run_in_threadpool(parse_pdf, contents, label)
+    contents, label = await read_document_upload(request, kind)
+    if kind == "docx":
+        text = await run_in_threadpool(read_docx, contents)
+        details = await run_in_threadpool(extract_resume_text, text)
+        imported = ImportResult(details=details, resume=ResumeSource(kind="docx", label=label[:255]))
+    else:
+        imported = await run_in_threadpool(parse_pdf, contents, label)
     return await run_in_threadpool(save_sources, current, links, imported, bytes(contents))
 
 
@@ -194,9 +213,10 @@ def download_resume():
         row = db.execute("SELECT contents FROM profile_resume WHERE id = 1").fetchone()
     if not resume or not resume.stored or not row:
         raise HTTPException(404, "Upload a new resume to save a downloadable copy.")
-    pdf = resume.kind == "pdf"
-    filename = quote(resume.label if pdf else "resume.txt", safe="")
-    return Response(row[0], media_type="application/pdf" if pdf else "text/plain", headers={
+    media = {"pdf": "application/pdf", "text": "text/plain",
+             "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"}
+    filename = quote("resume.txt" if resume.kind == "text" else resume.label, safe="")
+    return Response(row[0], media_type=media[resume.kind], headers={
         "Content-Disposition": f"attachment; filename*=UTF-8''{filename}",
         "X-Content-Type-Options": "nosniff",
     })
@@ -212,23 +232,23 @@ def import_text(resume: ResumeText):
 
 @app.post("/api/profile/import/pdf", response_model=ImportResult)
 async def import_pdf(request: Request):
-    contents, label = await read_pdf_upload(request)
+    contents, label = await read_document_upload(request)
     return await run_in_threadpool(parse_pdf, contents, label)
 
 
-async def read_pdf_upload(request: Request) -> tuple[bytearray, str]:
+async def read_document_upload(request: Request, kind: str = "pdf") -> tuple[bytearray, str]:
     label = unquote(request.headers.get("x-resume-filename", "")).replace("\\", "/").rsplit("/", 1)[-1].strip()
-    if not label.lower().endswith(".pdf"):
-        raise HTTPException(415, "Choose a PDF file.")
+    if not label.lower().endswith("." + kind):
+        raise HTTPException(415, f"Choose a {kind.upper()} file.")
     contents = bytearray()
     async for chunk in request.stream():
         if len(contents) + len(chunk) > MAX_PDF_BYTES:
-            raise HTTPException(413, "Choose a PDF up to 10 MB.")
+            raise HTTPException(413, "Choose a file up to 10 MB.")
         contents.extend(chunk)
     return contents, label
 
 
-def parse_pdf(contents: bytearray, label: str) -> ImportResult:
+def check_pdf(contents: bytearray) -> None:
     if not contents.startswith(b"%PDF-"):
         raise HTTPException(415, "This file is not a PDF.")
     try:
@@ -239,7 +259,71 @@ def parse_pdf(contents: bytearray, label: str) -> ImportResult:
             raise HTTPException(422, "Choose a PDF with up to 50 pages or paste your resume text.")
     except (PdfReadError, ValueError, KeyError, IndexError, RecursionError, OSError):
         raise HTTPException(422, "Couldn’t read this PDF. Paste your resume text instead.") from None
+
+
+def parse_pdf(contents: bytearray, label: str) -> ImportResult:
+    check_pdf(contents)
     return ImportResult(
         details=extract_resume_pdf(contents),
         resume=ResumeSource(kind="pdf", label=label[:255]),
     )
+
+
+@app.post("/api/profile/evidence/linkedin/pdf")
+async def linkedin_pdf(request: Request):
+    contents, label = await read_document_upload(request)
+    await run_in_threadpool(check_pdf, contents)
+    text = await run_in_threadpool(read_pdf_text, contents)
+    return {"label": label[:255], "text": text[:6000]}
+
+
+class RepositoryInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    url: str = Field(min_length=1, max_length=512)
+
+
+class EvidenceApproval(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    version: int = Field(gt=0)
+    evidence: ApprovedEvidence
+
+
+@app.put("/api/profile/evidence", response_model=Profile)
+def approve_evidence(body: EvidenceApproval):
+    from .sources import github_repository_url
+
+    current = read_profile()
+    if body.version != current.version:
+        raise HTTPException(409, "The profile changed. Reload before approving evidence.")
+    evidence = body.evidence
+    if evidence.kind == "github":
+        evidence.url = github_repository_url(evidence.url or "")[0]
+    else:
+        evidence.url = None
+    current.evidence = [item for item in current.evidence if item.kind != evidence.kind] + [evidence]
+    saved = save_profile(current)
+    if saved is None:
+        raise HTTPException(409, "The profile changed. Reload before approving evidence.")
+    return saved
+
+
+@app.delete("/api/profile/evidence/{kind}", response_model=Profile)
+def remove_evidence(kind: str, version: int):
+    current = read_profile()
+    if version != current.version:
+        raise HTTPException(409, "The profile changed. Reload before removing evidence.")
+    evidence = [item for item in current.evidence if item.kind != kind]
+    if evidence == current.evidence:
+        return current
+    current.evidence = evidence
+    saved = save_profile(current)
+    if saved is None:
+        raise HTTPException(409, "The profile changed. Reload before removing evidence.")
+    return saved
+
+
+@app.post("/api/profile/evidence/github")
+def preview_github(source: RepositoryInput):
+    from .sources import github_preview
+
+    return github_preview(source.url)

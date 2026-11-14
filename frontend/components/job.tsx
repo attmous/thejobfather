@@ -242,7 +242,7 @@ export function Job({
                   reviewEdits();
                 }}>Review details</button>
               : <button key="confirm" className="button primary" type="submit" disabled={!!busy}>
-                  {busy === "confirming" ? "Saving…" : "Start session"}
+                  {busy === "confirming" ? "Saving…" : "Confirm job"}
                 </button>}
           </div>
         </form>

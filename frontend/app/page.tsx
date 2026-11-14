@@ -10,6 +10,8 @@ import { Session } from "../components/session";
 import type { FactApproval } from "../components/session";
 import { Settings } from "../components/settings";
 import { Application } from "../components/application";
+import { CheckFit } from "../components/fit";
+import { ProfileEvidence } from "../components/profile-evidence";
 import { ProfileIcon } from "../components/profile-icon";
 import { apiRequest } from "../lib/api";
 import { PROFILE_URL_LIMIT, profileRequest } from "../lib/profile";
@@ -79,8 +81,8 @@ export default function Home() {
   function selectResume(file: File) {
     setNotice("");
     setError("");
-    if (!file.name.toLowerCase().endsWith(".pdf") || file.size > 10 * 1024 * 1024) {
-      setError("Choose a PDF up to 10 MB.");
+    if (!/\.(?:pdf|docx)$/i.test(file.name) || file.size > 10 * 1024 * 1024) {
+      setError("Choose a PDF or DOCX up to 10 MB.");
       return;
     }
     setResumeFile(file);
@@ -95,11 +97,12 @@ export default function Home() {
     setNotice("");
     setSaving(true);
     const links = { version: profile.version, github_url: github, linkedin_url: linkedin };
+    const docx = resumeFile?.name.toLowerCase().endsWith(".docx");
     try {
-      const saved = resumeFile ? await profileRequest<Profile>("/sources/pdf", {
+      const saved = resumeFile ? await profileRequest<Profile>(docx ? "/sources/docx" : "/sources/pdf", {
         method: "PUT",
         headers: {
-          "Content-Type": "application/pdf",
+          "Content-Type": docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document" : "application/pdf",
           "X-Resume-Filename": encodeURIComponent(resumeFile.name),
           "X-Profile-Sources": encodeURIComponent(JSON.stringify(links)),
         },
@@ -159,9 +162,10 @@ export default function Home() {
             <Job active={step === "Job"} confirmed={confirmedJob} onConfirm={job => {
               if (job.version !== confirmedJob?.version) setAutoCreate(0);
               setConfirmedJob(job);
-              if (currentStep.current === "Job") goTo("Session");
             }} />
           )}
+          {step === "Job" && confirmedJob && !!profile?.version && <CheckFit key={confirmedJob.version}
+            jobVersion={confirmedJob.version} jobTitle={confirmedJob.details.role} profileVersion={profile.version} onContinue={() => goTo("Session")} />}
           {step === "Job" && jobLoading && <p role="status">Loading job…</p>}
           {step === "Job" && jobError && <div className="panel standalone">
             <p role="alert">{jobError}</p>
@@ -179,7 +183,7 @@ export default function Home() {
                 <p role="alert">{error}</p><button className="button" onClick={() => void loadProfile()}>Try again</button>
               </div>
             ) : (
-              <form className="panel profile-form" onSubmit={save}>
+              <div className="workflow-stack"><form className="panel profile-form" onSubmit={save}>
                 <div className="profile-grid">
                   <section className="pane" aria-labelledby="resume-heading">
                     <h2 id="resume-heading" className="profile-icon-label"><ProfileIcon name="resume" />Resume</h2>
@@ -192,7 +196,7 @@ export default function Home() {
                           <a href="/api/profile/resume" download>Download</a>
                         )}
                       </div>}
-                      <input type="file" ref={fileInput} hidden accept=".pdf,application/pdf"
+                      <input type="file" ref={fileInput} hidden accept=".pdf,.docx"
                         onChange={event => {
                           const file = event.target.files?.[0];
                           event.target.value = "";
@@ -200,7 +204,7 @@ export default function Home() {
                         }} />
                       <div className="resume-actions">
                         <button className="button" type="button" disabled={saving} onClick={() => fileInput.current?.click()}>
-                          {resumeFile || profile.resume?.kind === "pdf" ? "Replace PDF" : "Choose PDF"}
+                          {resumeFile || profile.resume ? "Replace résumé" : "Choose PDF or DOCX"}
                         </button>
                         <button className="button quiet" type="button" disabled={saving}
                           aria-expanded={pasteOpen} aria-controls="paste-resume"
@@ -213,7 +217,7 @@ export default function Home() {
                         <textarea id="resume-text" value={resumeText} maxLength={60_000} disabled={saving} rows={5}
                           onChange={event => setResumeText(event.target.value)} />
                       </div>
-                      <p className="hint">PDF up to 10 MB. Gemini reads your resume when you save it.</p>
+                      <p className="hint">PDF or DOCX up to 10 MB.</p>
                     </div>
                   </section>
                   <section className="pane" aria-labelledby="links-heading">
@@ -240,6 +244,9 @@ export default function Home() {
                   <button className="button primary" type="submit" disabled={saving}>Save profile</button>
                 </div>
               </form>
+              {!!profile.version && <ProfileEvidence profile={profile} disabled={saving}
+                onApprove={saved => setProfile(current => current && saved.version >= current.version ? saved : current)} />}
+              </div>
             )
           ) : step === "Session" && (!confirmedJob || !profile?.version) ? (
             <div className="panel standalone">

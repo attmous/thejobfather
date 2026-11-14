@@ -7,7 +7,8 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from .gemini import GeminiError, generate_json
+from .gemini import GeminiError
+from .text_model import generate_json
 from .job import ConfirmedJob
 from .profile import MAX_TEXT, Profile, ProfileDetails, connect, read_profile_from, write_profile
 
@@ -15,6 +16,9 @@ router = APIRouter(prefix="/api/session")
 MAX_ANSWER = 4000
 MAX_FACT = 600
 MAX_MESSAGES = 61
+TOPICS = ("Job requirements", "Personal contribution", "Impact and scale",
+          "Project to highlight", "Cover letter angle")
+TopicStatus = Literal["covered", "skipped"]
 
 
 class SessionInput(BaseModel):
@@ -26,6 +30,13 @@ class SessionInput(BaseModel):
 class ChatAnswer(SessionInput):
     revision: int = Field(ge=1)
     answer: str = Field(min_length=1, max_length=MAX_ANSWER)
+
+
+class TopicInput(SessionInput):
+    revision: int = Field(ge=0)
+    topic: str
+    status: TopicStatus
+    mode: Literal["chat", "call"] = "chat"
 
 
 class FactInput(SessionInput):
@@ -53,6 +64,7 @@ class CapturedFact(BaseModel):
 class Session(BaseModel):
     job_version: int
     revision: int = 0
+    topics: dict[str, TopicStatus] = Field(default_factory=dict)
     messages: list[Message] = Field(default_factory=list)
     facts: list[CapturedFact] = Field(default_factory=list)
 
@@ -85,7 +97,9 @@ language of the job description. After that, use the language of the latest answ
 Default to English when the language is unclear. Do not infer language from names.
 Ask one concise question about their own work relevant to the job. Use the saved profile to
 avoid repeating questions. Ask what the candidate personally did if ownership is unclear.
-Use the latest answer and recent conversation to choose your next question. If the candidate
+Focus the next question on next_topic when provided. Focus on the named topic
+while adapting the question to the job and saved evidence. When next_topic is null,
+acknowledge the answer and offer an optional follow-up. If the candidate
 wants to stop, acknowledge it briefly.
 You may propose at most one new, relevant fact, grounded in the latest user answer. Write it
 as a short CV-style statement. Do not invent scope, outcomes, metrics, skills or ownership.
@@ -176,41 +190,58 @@ def capture_fact(
         session.facts.append(CapturedFact(text=proposal.fact, evidence=proposal.evidence, source=source))
 
 
-def run_turn(version: int, revision: int, answer: str = "") -> Session:
+def next_topic(session: Session, excluding=None):
+    return next((topic for topic in TOPICS if topic not in session.topics and topic != excluding), None)
+
+
+def run_turn(version: int, revision: int, answer: str = "", *, skip: Optional[str] = None) -> Session:
     with closing(connect()) as db:
         job = current_job(db, version)
         profile = read_profile_from(db)
         session = read_session(db, version)
     if not profile.version:
         raise HTTPException(409, "Save your profile before starting the session.")
-    if not answer and session.messages:
+    if not answer and not skip and session.messages:
         return session
     if session.revision != revision or (answer and not session.messages):
         raise HTTPException(409, "The session changed. Reload the chat before sending again.")
+    topic = next_topic(session)
+    if skip and skip != topic:
+        raise HTTPException(409, "The interview topic changed. Reload before continuing.")
     if len(session.messages) >= MAX_MESSAGES:
         raise HTTPException(409, "This chat has reached its limit. You can still review captured facts.")
 
     history = session.messages[-14:]
     context = {
         "job": job.details.model_dump(),
-        "saved_profile": profile.details.model_dump(exclude={"name"}),
+        "saved_profile": profile.details.model_dump(exclude={"name", "contact"}),
+        "approved_evidence": [evidence.text for evidence in profile.evidence],
+        "next_topic": next_topic(session, excluding=topic) if answer or skip else topic,
         "recent_messages": [message.model_dump() for message in history],
         "captured_facts": [fact.text for fact in session.facts],
         "latest_answer": answer,
     }
+    with closing(connect()) as db:
+        from .fit import read_baseline
+
+        baseline = read_baseline(db, version, profile)
+    if baseline:
+        context["baseline_gaps"] = [item.requirement for item in baseline.items if item.status != "supported"]
     try:
         turn = AgentTurn.model_validate(generate_json(PROMPT, [{"text": json.dumps(context, ensure_ascii=False)}], SCHEMA))
     except ValueError:
-        raise GeminiError(502, "Gemini returned an incomplete reply. Try again.") from None
+        raise GeminiError(502, "The text model returned an incomplete reply. Try again.") from None
 
     with closing(connect()) as db, db:
         db.execute("BEGIN IMMEDIATE")
         current_job(db, version)
         latest = read_session(db, version)
-        if not answer and latest.messages:
+        if not answer and not skip and latest.messages:
             return latest
         if latest.revision != revision:
             raise HTTPException(409, "The session changed. Reload the chat before sending again.")
+        if topic and (answer or skip):
+            latest.topics[topic] = "skipped" if skip else "covered"
         if answer:
             latest.messages.append(Message(speaker="user", text=answer))
             capture_fact(latest, read_profile_from(db), answer, turn, "chat")
@@ -229,12 +260,33 @@ def get_session(job_version: int):
 
 @router.post("/start", response_model=Session)
 def start_chat(body: SessionInput):
-    return run_turn(body.job_version, 0)
+    with closing(connect()) as db:
+        session = read_session(db, body.job_version)
+    return run_turn(body.job_version, session.revision)
 
 
 @router.post("/chat", response_model=Session)
 def send_answer(body: ChatAnswer):
     return run_turn(body.job_version, body.revision, body.answer)
+
+
+@router.post("/topics", response_model=Session)
+def update_topic(body: TopicInput):
+    if body.status == "skipped" and body.mode == "chat":
+        with closing(connect()) as db:
+            session = read_session(db, body.job_version)
+        if session.messages:
+            return run_turn(body.job_version, body.revision, skip=body.topic)
+    with closing(connect()) as db, db:
+        db.execute("BEGIN IMMEDIATE")
+        current_job(db, body.job_version)
+        session = read_session(db, body.job_version)
+        if session.revision != body.revision or next_topic(session) != body.topic:
+            raise HTTPException(409, "The interview topic changed. Reload before continuing.")
+        session.topics[body.topic] = body.status
+        session.revision += 1
+        write_session(db, session)
+        return session
 
 
 @router.post("/call/facts", response_model=Session)
@@ -251,7 +303,7 @@ def capture_call_answer(body: CallAnswer):
         raise HTTPException(409, "Save your profile before starting the call.")
     context = {
         "job": job.details.model_dump(),
-        "saved_profile": profile.details.model_dump(exclude={"name"}),
+        "saved_profile": profile.details.model_dump(exclude={"name", "contact"}),
         "previous_facts": [fact.text for fact in session.facts[-40:]],
         "latest_transcript": body.answer,
     }
@@ -272,7 +324,7 @@ latest transcript. If there is no relevant new fact, return empty strings for fa
             generate_json(instructions, [{"text": json.dumps(context, ensure_ascii=False)}], schema)
         )
     except ValueError:
-        raise GeminiError(502, "Gemini returned an incomplete fact. Try again.") from None
+        raise GeminiError(502, "The text model returned an incomplete fact. Try again.") from None
 
     with closing(connect()) as db, db:
         db.execute("BEGIN IMMEDIATE")
@@ -326,6 +378,8 @@ def add_fact(fact_id: UUID, body: FactInput):
             experience = "\n".join(filter(None, (experience, fact.text)))
             if len(experience) > MAX_TEXT:
                 raise HTTPException(422, "Try a shorter resume in Profile before adding this fact.")
+            if profile.resume_details is None:
+                profile.resume_details = profile.details.model_copy()
             profile.details.experience = experience
             profile.version += 1
             write_profile(db, profile)

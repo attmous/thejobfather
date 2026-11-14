@@ -60,6 +60,14 @@ Use the same `.env` for subsequent starts.
 The root `.env` configures Docker Compose. `backend/.env` is only used for local
 development. Secrets, runtime data, and local caches are excluded from Docker images.
 
+## Select a text model
+
+Open **Settings → Text model** to select Gemini, OpenAI, or Anthropic. For OpenAI
+or Anthropic, enter the API model ID and the matching provider key. Text chat,
+scoring, and application drafts use the selected provider. Gemini handles Live
+calls and URL Context for job links without structured posting data. PDF résumé
+imports use built-in text extraction when you select a different text provider.
+
 ## Troubleshooting
 
 | Symptom | What to try |
@@ -68,7 +76,8 @@ development. Secrets, runtime data, and local caches are excluded from Docker im
 | App does not open | Run `docker compose ps` and `docker compose logs --tail=60`. Both services should be healthy. Check [API health](http://localhost:3000/api/health), which should return `{"status":"ok"}`. |
 | Port 3000 is already in use | Set `JOBFATHER_PORT=3001` in `.env`, restart with `docker compose up -d --wait`, and open `http://localhost:3001/`. |
 | Gemini key, model, or quota error | Check the key and its model access / quota in [Google AI Studio](https://aistudio.google.com/apikey). Adjust model overrides only if needed. |
-| Resume PDF cannot be read | Use **Paste text**. PDFs must be unlocked, at most 10 MB and 50 pages. |
+| Résumé PDF cannot be read | Use **Paste text**. PDFs must be unlocked, at most 10 MB and 50 pages. |
+| DOCX or LinkedIn PDF has no readable text | Use a text-based file or paste its text. |
 | Job link cannot be imported | Use **Paste job description**, especially for postings behind a login. |
 | Voice call cannot start | Allow microphone access on localhost and check Gemini Live model access. The workflow can also be completed through chat. |
 | Drafts no longer match your profile | Choose **Update drafts** before revising the cover letter. |

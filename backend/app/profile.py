@@ -23,14 +23,28 @@ class ProfileDetails(BaseModel):
     summary: str = Field(default="", max_length=3000)
     experience: str = Field(default="", max_length=MAX_TEXT)
     skills: str = Field(default="", max_length=2000)
+    contact: str = Field(default="", max_length=400)
+    work_history: str = Field(default="", max_length=6000)
+    projects: str = Field(default="", max_length=6000)
+    education: str = Field(default="", max_length=4000)
+    certifications: str = Field(default="", max_length=4000)
 
 
 class ResumeSource(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
-    kind: Literal["pdf", "text"]
+    kind: Literal["pdf", "docx", "text"]
     label: str = Field(min_length=1, max_length=255)
     stored: bool = False
+
+
+class ApprovedEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+    kind: Literal["github", "linkedin"]
+    label: str = Field(min_length=1, max_length=255)
+    text: str = Field(min_length=1, max_length=6000)
+    url: Optional[str] = Field(default=None, max_length=512)
 
 
 class Profile(BaseModel):
@@ -39,6 +53,8 @@ class Profile(BaseModel):
     version: int = Field(ge=0)
     details: ProfileDetails
     resume: Optional[ResumeSource] = None
+    resume_details: Optional[ProfileDetails] = Field(default=None, repr=False)
+    evidence: list[ApprovedEvidence] = Field(default_factory=list, max_length=2)
     github_url: Optional[str] = None
     linkedin_url: Optional[str] = None
 

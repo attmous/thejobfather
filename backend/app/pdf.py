@@ -12,14 +12,21 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
+from .exports import document_lines
+
 FONT_DIR = Path(__file__).resolve().parents[1] / "fonts"
 pdfmetrics.registerFont(TTFont("JobFather", str(FONT_DIR / "DejaVuSans.ttf")))
 pdfmetrics.registerFont(TTFont("JobFather-Bold", str(FONT_DIR / "DejaVuSans-Bold.ttf")))
 
 
+def pdf_text(text: str) -> str:
+    text = "".join(char for char in text if char.isprintable() or char == "\n")
+    return text.translate(str.maketrans({dash: "-" for dash in "\u2010\u2011\u2012\u2013\u2014\u2212"}))
+
+
 def render_document(run, kind: str) -> bytes:
     stream = BytesIO()
-    profile, documents = run.profile.details, run.documents
+    profile = run.profile.details
     body = ParagraphStyle("body", fontName="JobFather", fontSize=10, leading=15,
                           textColor=colors.HexColor("#202020"), spaceAfter=10, alignment=TA_LEFT)
     title = ParagraphStyle("name", parent=body, fontName="JobFather-Bold", fontSize=23, leading=29, spaceAfter=4)
@@ -29,32 +36,22 @@ def render_document(run, kind: str) -> bytes:
     bullet = ParagraphStyle("bullet", parent=body, leftIndent=12, firstLineIndent=0, bulletIndent=0)
 
     def paragraph(text, style=body, **kwargs):
-        # Keep genuine letters/accents; normalize nonstandard dashes and control characters.
-        text = "".join(char for char in text if char.isprintable() or char == "\n")
-        for dash in ("\u2010", "\u2011", "\u2012", "\u2013", "\u2014", "\u2212"):
-            text = text.replace(dash, "-")
+        text = pdf_text(text)
         face = pdfmetrics.getFont(style.fontName).face
         if any(ord(char) not in face.charWidths for char in text if not char.isspace()):
             raise HTTPException(422, "A character in this draft is not supported by the PDF font.")
         return Paragraph(escape(text).replace("\n", "<br/>"), style, **kwargs)
 
-    story = [paragraph(profile.name, title)]
-    if kind == "cv":
-        if profile.role:
-            story.append(paragraph(profile.role, subtitle))
-        story.append(paragraph("Profile", heading))
-        story.extend(paragraph(block.text) for block in documents.cv.summary)
-        if documents.cv.experience:
-            story.append(paragraph("Experience", heading))
-            story.extend(paragraph(block.text, bullet, bulletText="•") for block in documents.cv.experience)
-        if documents.cv.skills:
-            story.append(paragraph("Skills", heading))
-            story.append(paragraph(", ".join(block.text for block in documents.cv.skills)))
-    else:
-        story += [paragraph(f"{run.job.details.role} | {run.job.details.company}", subtitle),
-                  Spacer(1, 10), paragraph("Dear Hiring Team,"), Spacer(1, 3)]
-        story.extend(paragraph(block.text) for block in documents.letter)
-        story += [Spacer(1, 8), paragraph("Kind regards,"), paragraph(profile.name)]
+    subheading = ParagraphStyle("subheading", parent=body, fontName="JobFather-Bold",
+                               spaceBefore=6, spaceAfter=4, keepWithNext=True)
+    styles = {"title": title, "subtitle": subtitle, "heading": heading,
+              "subheading": subheading, "bullet": bullet, "text": body}
+    story = []
+    for role, text in document_lines(run, kind):
+        if kind == "letter" and role == "text" and len(story) > 2:
+            story.append(Spacer(1, 5))
+        options = {"bulletText": "•"} if role == "bullet" else {}
+        story.append(paragraph(text, styles[role], **options))
 
     def footer(canvas, doc):
         canvas.saveState()
@@ -64,7 +61,7 @@ def render_document(run, kind: str) -> bytes:
         canvas.restoreState()
 
     doc = SimpleDocTemplate(stream, pagesize=A4, leftMargin=48, rightMargin=48, topMargin=45, bottomMargin=48,
-                            title=f"{profile.name} - {'CV' if kind == 'cv' else 'Cover letter'}", author=profile.name,
+                            title=f"{profile.name} - " + {"cv": "CV", "letter": "Cover letter", "fit": "Job fit"}[kind], author=profile.name,
                             invariant=1)
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return stream.getvalue()

@@ -8,9 +8,11 @@ import type { ConfirmedJob } from "./job";
 import { Call } from "./call";
 
 type Fact = { id: string; text: string; evidence: string; source: "chat" | "call"; added: boolean };
+const topics = ["Job requirements", "Personal contribution", "Impact and scale", "Project to highlight", "Cover letter angle"];
 type Chat = {
   job_version: number;
   revision: number;
+  topics: Record<string, "covered" | "skipped">;
   messages: { speaker: "agent" | "user"; text: string }[];
   facts: Fact[];
 };
@@ -42,6 +44,7 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
   const busyRef = useRef(false);
   const factQueue = useRef(Promise.resolve());
   const source = { job_version: job.version };
+  const currentTopic = topics.find(topic => !chat?.topics[topic]);
 
   useEffect(() => {
     if (!active) return;
@@ -93,6 +96,13 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
     });
   }
 
+  function updateTopic(status: "covered" | "skipped") {
+    if (!chat || !currentTopic) return;
+    void update("Updating interview…", () => request<Chat>("/topics", "POST", {
+      ...source, revision: chat.revision, topic: currentTopic, status, mode,
+    }), setChat);
+  }
+
   function editFact(event: FormEvent<HTMLFormElement>, fact: Fact) {
     event.preventDefault();
     if (!editText.trim()) return;
@@ -135,6 +145,20 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
         <button type="button" className="button" aria-pressed={mode === "chat"} onClick={() => setMode("chat")}>Chat</button>
         <button type="button" className="button" aria-pressed={mode === "call"} onClick={() => setMode("call")}>Call</button>
       </div>
+      <section className="panel pane workflow-stack" aria-labelledby="interview-topics">
+        <div className="workflow-row"><h2 id="interview-topics">Interview topics</h2>
+          <span className="hint">{topics.filter(topic => chat?.topics[topic] === "covered").length} of {topics.length} covered</span></div>
+        <ul className="interview-topics">{topics.map(topic => {
+          const status = chat?.topics[topic];
+          return <li key={topic} aria-current={topic === currentTopic ? "step" : undefined}>
+            <span>{topic}</span><small>{status === "covered" ? "Covered" : status === "skipped" ? "Skipped" : topic === currentTopic ? "Current" : "Open"}</small>
+          </li>;
+        })}</ul>
+        {chat && currentTopic && (mode === "call" || !!chat.messages.length) && <div className="actions">
+          {mode === "call" && <button className="button" type="button" disabled={!!busy} onClick={() => updateTopic("covered")}>Mark topic covered</button>}
+          <button className="button quiet" type="button" disabled={!!busy} onClick={() => updateTopic("skipped")}>Skip topic</button>
+        </div>}
+      </section>
       <Call active={active && mode === "call"} jobVersion={job.version} onAnswer={captureCallAnswer} />
       {mode === "chat" && (chat?.messages.length ? <section className="panel session-chat" aria-label="Chat with JobFather">
         <div className="session-messages" role="log" aria-label="Messages">

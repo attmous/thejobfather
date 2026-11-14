@@ -34,8 +34,9 @@ def connect_call(body: SessionInput):
         raise GeminiError(503, "Check GEMINI_LIVE_MODEL on the server.")
     context = json.dumps({
         "job": job.details.model_dump(),
-        "profile": profile.details.model_dump(exclude={"name"}),
+        "profile": profile.details.model_dump(exclude={"name", "contact"}),
         "recent_chat": [message.model_dump() for message in session.messages[-8:]],
+        "interview_progress": session.topics,
         "facts_already_discussed": [fact.text for fact in session.facts[-25:]],
     }, ensure_ascii=False)
     instructions = """You are JobFather, helping the candidate prepare for their confirmed job.
