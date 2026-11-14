@@ -11,8 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.responses import Response
 
-from .gemini import GeminiError
-from .text_model import generate_json
+from .gemini import GeminiError, generate_json
 from .fit import Baseline, Fit, assess_baseline, baseline_response, job_quote, read_baseline, score
 from .job import ConfirmedJob
 from .profile import Profile, connect, read_profile_from

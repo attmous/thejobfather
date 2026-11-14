@@ -7,8 +7,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from .gemini import GeminiError
-from .text_model import generate_json
+from .gemini import GeminiError, generate_json
 from .job import ConfirmedJob
 from .profile import MAX_TEXT, Profile, ProfileDetails, connect, read_profile_from, write_profile
 
@@ -51,6 +50,7 @@ class CallAnswer(SessionInput):
 class Message(BaseModel):
     speaker: Literal["agent", "user"]
     text: str
+    topic: Optional[str] = None
 
 
 class CapturedFact(BaseModel):
@@ -201,22 +201,24 @@ def run_turn(version: int, revision: int, answer: str = "", *, skip: Optional[st
         session = read_session(db, version)
     if not profile.version:
         raise HTTPException(409, "Save your profile before starting the session.")
-    if not answer and not skip and session.messages:
-        return session
-    if session.revision != revision or (answer and not session.messages):
-        raise HTTPException(409, "The session changed. Reload the chat before sending again.")
     topic = next_topic(session)
+    if not answer and not skip and session.messages and session.messages[-1].topic == topic:
+        return session
+    if (session.revision != revision
+            or (answer and (not session.messages or session.messages[-1].topic != topic))):
+        raise HTTPException(409, "The session changed. Reload the chat before sending again.")
     if skip and skip != topic:
         raise HTTPException(409, "The interview topic changed. Reload before continuing.")
     if len(session.messages) >= MAX_MESSAGES:
         raise HTTPException(409, "This chat has reached its limit. You can still review captured facts.")
 
+    following_topic = next_topic(session, excluding=topic) if answer or skip else topic
     history = session.messages[-14:]
     context = {
         "job": job.details.model_dump(),
         "saved_profile": profile.details.model_dump(exclude={"name", "contact"}),
         "approved_evidence": [evidence.text for evidence in profile.evidence],
-        "next_topic": next_topic(session, excluding=topic) if answer or skip else topic,
+        "next_topic": following_topic,
         "recent_messages": [message.model_dump() for message in history],
         "captured_facts": [fact.text for fact in session.facts],
         "latest_answer": answer,
@@ -236,7 +238,8 @@ def run_turn(version: int, revision: int, answer: str = "", *, skip: Optional[st
         db.execute("BEGIN IMMEDIATE")
         current_job(db, version)
         latest = read_session(db, version)
-        if not answer and not skip and latest.messages:
+        if (not answer and not skip and latest.messages
+                and latest.messages[-1].topic == next_topic(latest)):
             return latest
         if latest.revision != revision:
             raise HTTPException(409, "The session changed. Reload the chat before sending again.")
@@ -245,7 +248,7 @@ def run_turn(version: int, revision: int, answer: str = "", *, skip: Optional[st
         if answer:
             latest.messages.append(Message(speaker="user", text=answer))
             capture_fact(latest, read_profile_from(db), answer, turn, "chat")
-        latest.messages.append(Message(speaker="agent", text=turn.message))
+        latest.messages.append(Message(speaker="agent", text=turn.message, topic=following_topic))
         latest.revision += 1
         write_session(db, latest)
     return latest
@@ -281,7 +284,8 @@ def update_topic(body: TopicInput):
         db.execute("BEGIN IMMEDIATE")
         current_job(db, body.job_version)
         session = read_session(db, body.job_version)
-        if session.revision != body.revision or next_topic(session) != body.topic:
+        # A voice transcript can add facts while this topic action is in flight.
+        if next_topic(session) != body.topic or (body.mode == "chat" and session.revision != body.revision):
             raise HTTPException(409, "The interview topic changed. Reload before continuing.")
         session.topics[body.topic] = body.status
         session.revision += 1

@@ -50,11 +50,12 @@ function JobDescription({ description }: { description: string }) {
 }
 
 export function Job({
-  active, confirmed, onConfirm,
+  active, confirmed, onConfirm, onReviewChange,
 }: {
   active: boolean;
   confirmed: ConfirmedJob | null;
   onConfirm: (job: ConfirmedJob) => void;
+  onReviewChange: (needsReview: boolean) => void;
 }) {
   const [link, setLink] = useState(confirmed?.source_url ?? "");
   const [text, setText] = useState("");
@@ -69,6 +70,11 @@ export function Job({
   const reviewHeading = useRef<HTMLHeadingElement>(null);
   const pasteInput = useRef<HTMLTextAreaElement>(null);
   const focusReview = useRef(false);
+  const needsReview = draft !== confirmed || editing;
+
+  useEffect(() => {
+    onReviewChange(needsReview);
+  }, [needsReview, onReviewChange]);
 
   useEffect(() => {
     if (active && !busy && focusReview.current) {
@@ -236,13 +242,16 @@ export function Job({
           </>}
           {confirmError && <p className="error" role="alert">{confirmError}</p>}
           <div className="form-footer">
+            {!editing && !confirmError && <p className={needsReview ? "hint" : "hint success"} role="status">
+              {needsReview ? "Review the details, then confirm the job." : "Job confirmed."}
+            </p>}
             {editing
               ? <button key="review" className="button primary" type="button" disabled={!!busy} onClick={event => {
                   event.preventDefault();
                   reviewEdits();
                 }}>Review details</button>
               : <button key="confirm" className="button primary" type="submit" disabled={!!busy}>
-                  {busy === "confirming" ? "Saving…" : "Confirm job"}
+                  {busy === "confirming" ? "Saving…" : needsReview ? "Confirm job" : "Continue to session"}
                 </button>}
           </div>
         </form>

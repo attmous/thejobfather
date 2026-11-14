@@ -1,4 +1,5 @@
 """Workflow regressions using fictional evidence and provider responses."""
+import json
 import unittest
 from io import BytesIO
 from unittest.mock import patch
@@ -6,7 +7,7 @@ from zipfile import ZipFile
 
 from pydantic import HttpUrl
 
-from backend.app import application, fit, profile, sources, text_model
+from backend.app import application, fit, profile, session, sources
 
 from test_application import documents
 import test_application
@@ -43,6 +44,38 @@ class WorkflowTests(unittest.TestCase):
         self.assertIsNone(state["error"])
         self.assertGreater(state["comparison"]["after"], state["comparison"]["before"])
         self.assertEqual(state["current"]["baseline"]["resume_sources"]["experience-1"], "Built React forms at A & B.")
+
+    def test_topic_skip_and_call_progress_resume_chat_on_the_current_prompt(self):
+        next_topics = []
+
+        def ask(_, parts, schema):
+            topic = json.loads(parts[0]["text"])["next_topic"]
+            next_topics.append(topic)
+            return {"message": f"Tell me about {topic}.", "fact": "", "evidence": ""}
+
+        job = {"job_version": 1}
+        with patch.object(session, "generate_json", side_effect=ask):
+            started = self.client.post("/api/session/start", json=job).json()
+            skipped = self.client.post("/api/session/topics", json={
+                **job, "revision": started["revision"], "topic": "Job requirements",
+                "status": "skipped", "mode": "chat",
+            }).json()
+            self.assertEqual(skipped["topics"], {"Job requirements": "skipped"})
+            call_progress = {
+                **job, "revision": started["revision"], "topic": "Personal contribution",
+                "status": "covered", "mode": "call",
+            }
+            advanced = self.client.post("/api/session/topics", json=call_progress)
+            self.assertEqual(advanced.status_code, 200)
+            self.assertEqual(self.client.post("/api/session/topics", json=call_progress).status_code, 409)
+            self.assertEqual(self.client.post("/api/session/chat", json={
+                **job, "revision": advanced.json()["revision"], "answer": "Old question",
+            }).status_code, 409)
+            resumed = self.client.post("/api/session/start", json=job).json()
+            self.assertEqual(resumed["messages"][-1]["topic"], "Impact and scale")
+            self.assertEqual(resumed["topics"]["Personal contribution"], "covered")
+            self.assertEqual(self.client.post("/api/session/start", json=job).json(), resumed)
+        self.assertEqual(next_topics, ["Job requirements", "Personal contribution", "Impact and scale"])
 
     def test_cv_revision_keeps_letter_and_exports_revision(self):
         first = self.create()
@@ -82,22 +115,6 @@ class WorkflowTests(unittest.TestCase):
         html = '<script type="application/ld+json">{"@graph":[{"@type":"JobPosting","title":"Engineer","description":"Build tools"}]}</script>'
         with patch.object(sources, "read_public_html", return_value=html):
             self.assertIn("Build tools", sources.structured_posting(HttpUrl("https://example.com/jobs/42"), max_length=500))
-
-    def test_provider_adapters(self):
-        example = {"message": "Hello"}
-        variants = [
-            ("openai", {"status": "completed", "output": [{"type": "message", "content": [
-                {"type": "output_text", "text": '{"message":"Hello"}'}]}]}, "https://api.openai.com/v1/responses"),
-            ("anthropic", {"stop_reason": "end_turn", "content": [
-                {"type": "text", "text": '{"message":"Hello"}'}]}, "https://api.anthropic.com/v1/messages"),
-        ]
-        for provider, result, url in variants:
-            with self.subTest(provider=provider), patch.object(text_model, "text_credentials", return_value=(provider, "test-model", "fictional-key")):
-                with patch.object(text_model.httpx, "post", return_value=text_model.httpx.Response(200, json=result)) as call:
-                    self.assertEqual(text_model.generate_json("Reply", [{"text": "test"}], {}), example)
-                    self.assertEqual(call.call_args.args[0], url)
-                    self.assertEqual(call.call_args.kwargs["json"]["model"], "test-model")
-
 
     def test_docx_import_keeps_original_and_linkedin_pdf_is_review_only(self):
         from backend.app import main

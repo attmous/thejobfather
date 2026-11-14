@@ -90,6 +90,14 @@ export class LiveCall {
     }
   }
 
+  moveToTopic(topic: string | undefined) {
+    if (!this.ready) return;
+    const text = topic
+      ? `The app has moved to the interview topic "${topic}". Ask one short question about it.`
+      : "The app has reached the end of the interview topics. Briefly wrap up the interview.";
+    this.send({ realtimeInput: { text } });
+  }
+
   private send(message: object) {
     if (!this.stopped && this.socket?.readyState === WebSocket.OPEN) this.socket.send(JSON.stringify(message));
   }
@@ -251,7 +259,6 @@ export class LiveCall {
     if (this.context && this.context.state !== "closed") void this.context.close().catch(() => {});
     if (notify) {
       this.finalize("agent");
-      this.events.caption("user", "", false);
       this.events.ended(message);
     }
   }

@@ -6,7 +6,7 @@
 
 <p align="center">
   Turn a conversation about your work into a tailored CV, cover letter, and job-fit analysis.<br>
-  Built with Gemini and Gemini Live, with optional OpenAI or Anthropic text models. Run it on your own computer with Docker.
+  Built with Gemini and Gemini Live. Run it on your own computer with Docker.
 </p>
 
 <p align="center">
@@ -44,7 +44,7 @@ an application you can edit and download.
 | Feedback on the CV or cover letter | Revised drafts, version history, PDF readiness checks, and a ZIP with the CV, letter, and fit report. |
 
 The app checks source references, numbers, and skills before saving drafts, and
-asks the configured text model to perform a consistency review. You still review the final result.
+asks Gemini to perform a consistency review. You still review the final result.
 
 ## Quick start
 
@@ -103,7 +103,7 @@ the **Raw** view. All people, companies, and experience in these files are ficti
 - [ ] **Import a profile.** In **Profile → Paste text**, paste Alex’s resume and
   choose **Save profile**. Check that Alex’s name and experience appear.
 - [ ] **Choose a job.** In **Job → Paste job description**, paste the sample job.
-  Choose **Extract details** and **Confirm job**. Select **Check baseline**, then **Start session**.
+  Choose **Extract details** and **Confirm job** to open Session. Select **Check baseline** there.
 - [ ] **Uncover a detail.** Choose **Start chat** and try this answer:
   “For the library app, I redesigned the checkout form after interviewing
   volunteers.” Review a captured fact, edit it if needed, and choose **Add to profile**.
@@ -136,7 +136,7 @@ Your profile, imported resume, drafts, and saved key persist in a Docker volume.
 ## Your data and the current scope
 
 - **Local workspace, cloud AI.** Saved work stays in a local Docker volume.
-  Your selected text provider receives the content needed for text features.
+  Gemini receives the content needed for text features.
   Gemini Live receives microphone audio and the screen frames you choose to share.
 - **Your key, your control.** The local backend saves the key with owner-only file
   permissions. The UI reports its status without returning the value.

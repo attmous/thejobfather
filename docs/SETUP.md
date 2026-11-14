@@ -60,14 +60,6 @@ Use the same `.env` for subsequent starts.
 The root `.env` configures Docker Compose. `backend/.env` is only used for local
 development. Secrets, runtime data, and local caches are excluded from Docker images.
 
-## Select a text model
-
-Open **Settings → Text model** to select Gemini, OpenAI, or Anthropic. For OpenAI
-or Anthropic, enter the API model ID and the matching provider key. Text chat,
-scoring, and application drafts use the selected provider. Gemini handles Live
-calls and URL Context for job links without structured posting data. PDF résumé
-imports use built-in text extraction when you select a different text provider.
-
 ## Troubleshooting
 
 | Symptom | What to try |

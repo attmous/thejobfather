@@ -7,10 +7,9 @@ from typing import Literal, Optional
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
 
-from .gemini import GeminiError
+from .gemini import GeminiError, generate_json
 from .profile import Profile, connect, read_profile_from
 from .session import current_job
-from .text_model import generate_json
 
 PILLARS = {"skills": 35, "experience": 30, "alignment": 20, "impact": 15}
 PILLAR_LABELS = {"skills": "Skills", "experience": "Experience",

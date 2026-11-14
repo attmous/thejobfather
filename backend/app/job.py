@@ -6,8 +6,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 from .ashby import ashby_posting_text
-from .gemini import GeminiError
-from .text_model import generate_json
+from .gemini import GeminiError, generate_json
 from .profile import MAX_TEXT, connect
 from .sources import board_posting, structured_posting
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { apiRequest } from "../lib/api";
 
 export type FitItem = {
@@ -40,49 +40,61 @@ export function FitComparison({ score }: { score: FitScore }) {
 
 type Baseline = { items: FitItem[]; score: FitScore };
 
-export function CheckFit({ jobVersion, jobTitle, profileVersion, onContinue }: {
-  jobVersion: number; jobTitle: string; profileVersion: number; onContinue: () => void;
+export function SessionFit({ jobVersion, profileVersion }: {
+  jobVersion: number; profileVersion: number;
 }) {
   const [baseline, setBaseline] = useState<Baseline | null>(null);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const endpoint = "/api/application/baseline?job_version=" + jobVersion;
+  const request = useRef<AbortController | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
+    request.current = controller;
     setBaseline(null);
+    setBusy(false);
+    setLoading(true);
     setError("");
     apiRequest<Baseline | null>(endpoint, { signal: controller.signal })
-      .then(setBaseline)
-      .catch(failure => { if (!controller.signal.aborted) setError(failure.message); });
+      .then(result => { if (!controller.signal.aborted) setBaseline(result); })
+      .catch(failure => { if (!controller.signal.aborted) setError(failure.message); })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [endpoint, profileVersion]);
 
   async function check() {
+    if (!request.current || request.current.signal.aborted || loading || busy) return;
+    const controller = request.current;
     setBusy(true);
     setError("");
     try {
-      setBaseline(await apiRequest<Baseline>(endpoint, { method: "POST" }));
+      const result = await apiRequest<Baseline>(endpoint, { method: "POST", signal: controller.signal });
+      if (!controller.signal.aborted) setBaseline(result);
     } catch (failure) {
-      setError((failure as Error).message);
+      if (!controller.signal.aborted) setError((failure as Error).message);
     } finally {
-      setBusy(false);
+      if (!controller.signal.aborted) setBusy(false);
     }
   }
 
-  return <section className="panel pane workflow-stack" aria-labelledby="baseline-fit-heading">
-    <header><h2 id="baseline-fit-heading">Check fit</h2><p className="hint">Compare your original résumé with {jobTitle} before the interview.</p></header>
-    {baseline && <>
+  return <section className="panel pane workflow-stack session-fit" aria-labelledby="baseline-fit-heading">
+    <div className="workflow-row">
+      <div><h2 id="baseline-fit-heading">Job fit</h2><p className="hint">Baseline estimate from your original résumé</p></div>
+      {baseline ? <p className="session-fit-value"><strong>{baseline.score.before}</strong> / 100</p>
+        : <button className="button" type="button" disabled={busy || loading} onClick={() => void check()}>
+          {busy ? "Checking fit…" : "Check baseline"}
+        </button>}
+    </div>
+    {baseline && <details className="session-fit-details">
+      <summary>View fit details</summary>
       <FitComparison score={baseline.score} />
       <ul className="workflow-rows">{baseline.items.map(item => <li key={item.requirement}>
         <div className="fit-heading"><strong>{item.requirement}</strong><span className="fit-status" data-status={item.status}>{fitLabels[item.status]}</span></div>
         <p className="hint">{item.explanation}</p>
       </li>)}</ul>
-    </>}
+    </details>}
     {error && <p className="error" role="alert">{error}</p>}
-    <div className="actions">
-      {!baseline && <button className="button primary" type="button" disabled={busy} onClick={() => void check()}>{busy ? "Checking fit…" : "Check baseline"}</button>}
-      <button className={baseline ? "button primary" : "button"} type="button" disabled={busy} onClick={onContinue}>Start session</button>
-    </div>
   </section>;
 }

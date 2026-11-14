@@ -86,8 +86,6 @@ async def local_requests(request: Request, call_next):
 async def validation_error(request: Request, error: RequestValidationError):
     if request.url.path.rstrip("/") == "/api/settings/gemini":
         return JSONResponse({"detail": "Enter a Gemini API key."}, status_code=422)
-    if request.url.path.rstrip("/") == "/api/settings/text":
-        return JSONResponse({"detail": "Check the provider, model ID, and API key."}, status_code=422)
     if request.url.path == "/api/job/import/link":
         return JSONResponse({"detail": "Enter a public job link."}, status_code=422)
     if request.url.path == "/api/profile/sources":

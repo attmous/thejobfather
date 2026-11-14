@@ -1,16 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import logo from "../../assets/thejobfather-logo.png";
 import { Job } from "../components/job";
 import type { ConfirmedJob } from "../components/job";
 import { Session } from "../components/session";
-import type { FactApproval } from "../components/session";
+import type { FactApproval, InterviewProgress } from "../components/session";
 import { Settings } from "../components/settings";
 import { Application } from "../components/application";
-import { CheckFit } from "../components/fit";
+import type { DraftProgress } from "../components/application";
 import { ProfileEvidence } from "../components/profile-evidence";
 import { ProfileIcon } from "../components/profile-icon";
 import { apiRequest } from "../lib/api";
@@ -19,6 +19,8 @@ import type { Profile } from "../lib/profile";
 
 const steps = ["Profile", "Job", "Session", "Application"] as const;
 type Step = (typeof steps)[number];
+type StepStatus = { label: string; tone: "pending" | "working" | "done" };
+const notStarted: StepStatus = { label: "Not started", tone: "pending" };
 
 export default function Home() {
   const [step, setStep] = useState<Step>("Profile");
@@ -35,6 +37,9 @@ export default function Home() {
   const [confirmedJob, setConfirmedJob] = useState<ConfirmedJob | null>(null);
   const [jobLoading, setJobLoading] = useState(true);
   const [jobError, setJobError] = useState("");
+  const [jobNeedsReview, setJobNeedsReview] = useState(false);
+  const [interviewProgress, setInterviewProgress] = useState<{ jobVersion: number; progress: InterviewProgress }>();
+  const [draftProgress, setDraftProgress] = useState<{ jobVersion: number; progress: DraftProgress }>();
   const [autoCreate, setAutoCreate] = useState(0);
   const fileInput = useRef<HTMLInputElement>(null);
   const currentStep = useRef<Step>("Profile");
@@ -134,6 +139,33 @@ export default function Home() {
     setProfile(current => current?.version === previous_profile_version ? saved : current);
   }
 
+  const onInterviewProgress = useCallback((jobVersion: number, progress: InterviewProgress) => {
+    setInterviewProgress({ jobVersion, progress });
+  }, []);
+  const onDraftProgress = useCallback((jobVersion: number, progress: DraftProgress) => {
+    setDraftProgress({ jobVersion, progress });
+  }, []);
+  const profileChanged = !!profile && (!!resumeFile || !!resumeText.trim()
+    || github.trim() !== (profile.github_url ?? "") || linkedin.trim() !== (profile.linkedin_url ?? ""));
+  const interview = confirmedJob && interviewProgress?.jobVersion === confirmedJob.version
+    ? interviewProgress.progress : undefined;
+  const drafts = confirmedJob && draftProgress?.jobVersion === confirmedJob.version
+    ? draftProgress.progress : undefined;
+  const progress: Record<Step, StepStatus> = {
+    Profile: saving ? { label: "Saving…", tone: "working" }
+      : profileChanged ? { label: "Unsaved changes", tone: "working" }
+      : profile?.version ? { label: "Saved", tone: "done" } : notStarted,
+    Job: jobNeedsReview ? { label: "Needs review", tone: "working" }
+      : confirmedJob ? { label: "Confirmed", tone: "done" } : notStarted,
+    Session: interview === "finished" ? { label: "Finished", tone: "done" }
+      : interview === "in-progress" ? { label: "In progress", tone: "working" } : notStarted,
+    Application: drafts?.pending ? { label: "Drafting…", tone: "working" }
+      : drafts && drafts.profileVersion !== null
+        ? drafts.profileVersion === profile?.version ? { label: "Drafts ready", tone: "done" }
+          : { label: "Needs update", tone: "working" }
+        : drafts?.failed ? { label: "Try again", tone: "working" } : notStarted,
+  };
+
   const savedName = profile?.details.name ?? "";
   const initials = savedName.split(/\s+/).filter(Boolean).slice(0, 2).map(word => Array.from(word)[0]).join("").toUpperCase();
   return (
@@ -148,34 +180,41 @@ export default function Home() {
       </header>
       <div className="shell">
         <nav className="steps" aria-label="Application steps">
-          {steps.map((item, index) => (
-            <button key={item} type="button" className="step"
+          {steps.map((item, index) => {
+            const status = progress[item];
+            const statusId = "step-status-" + item.toLowerCase();
+            return <button key={item} type="button" className="step" data-tone={status.tone}
               aria-current={step === item ? "step" : undefined}
+              aria-labelledby={statusId + "-label"} aria-describedby={statusId}
               disabled={saving} onClick={() => goTo(item)}>
-              <span aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>{item}
-            </button>
-          ))}
+              <span className="step-marker" aria-hidden="true">{status.tone === "done" ? "✓" : index + 1}</span>
+              <span className="step-copy">
+                <span id={statusId + "-label"}>{item}</span>
+                <span className="step-status" id={statusId}>{status.label}</span>
+              </span>
+            </button>;
+          })}
         </nav>
         <main className="main" id="main">
           <h1 ref={title} tabIndex={-1}>{step}</h1>
           {!jobLoading && !jobError && (
-            <Job active={step === "Job"} confirmed={confirmedJob} onConfirm={job => {
+            <Job active={step === "Job"} confirmed={confirmedJob} onReviewChange={setJobNeedsReview} onConfirm={job => {
               if (job.version !== confirmedJob?.version) setAutoCreate(0);
               setConfirmedJob(job);
+              setJobNeedsReview(false);
+              if (currentStep.current === "Job") goTo("Session");
             }} />
           )}
-          {step === "Job" && confirmedJob && !!profile?.version && <CheckFit key={confirmedJob.version}
-            jobVersion={confirmedJob.version} jobTitle={confirmedJob.details.role} profileVersion={profile.version} onContinue={() => goTo("Session")} />}
           {step === "Job" && jobLoading && <p role="status">Loading job…</p>}
           {step === "Job" && jobError && <div className="panel standalone">
             <p role="alert">{jobError}</p>
             <button className="button" type="button" onClick={() => void loadJob()}>Try again</button>
           </div>}
           {confirmedJob && !!profile?.version && <Session
-            key={`session-${confirmedJob.version}`} job={confirmedJob} active={step === "Session"} onApprove={applyFactApproval}
+            key={`session-${confirmedJob.version}`} job={confirmedJob} profileVersion={profile.version} active={step === "Session"} onApprove={applyFactApproval} onProgress={onInterviewProgress}
             onCreateDrafts={() => { setAutoCreate(value => value + 1); goTo("Application"); }} />}
           {confirmedJob && !!profile?.version && <Application key={`application-${confirmedJob.version}`} job={confirmedJob}
-            active={step === "Application"} autoCreate={autoCreate} />}
+            active={step === "Application"} autoCreate={autoCreate} onProgress={onDraftProgress} />}
           {step === "Profile" ? (
             loading ? <p role="status">Loading profile…</p> :
             !profile ? (
@@ -240,7 +279,7 @@ export default function Home() {
                 </div>
                 <div className="form-footer profile-footer">
                   {error ? <p className="error" role="alert">{error}</p> :
-                    <p className="hint" role="status">{saving ? "Saving profile…" : notice}</p>}
+                    <p className={notice === "Profile saved." ? "hint success" : "hint"} role="status">{saving ? "Saving profile…" : notice}</p>}
                   <button className="button primary" type="submit" disabled={saving}>Save profile</button>
                 </div>
               </form>

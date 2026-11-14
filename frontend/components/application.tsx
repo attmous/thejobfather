@@ -32,6 +32,8 @@ type State = {
   versions: { id: string; version: number; tone: Tone; created_at: string }[];
 };
 
+export type DraftProgress = { profileVersion: number | null; pending: boolean; failed: boolean };
+
 function post<T>(path: string, body: object) {
   return apiRequest<T>("/api/application/" + path, {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
@@ -48,8 +50,9 @@ function Evidence({ ids, sources }: { ids: string[]; sources: Source[] }) {
   </details>;
 }
 
-export function Application({ job, active, autoCreate = 0 }: {
+export function Application({ job, active, autoCreate = 0, onProgress }: {
   job: ConfirmedJob; active: boolean; autoCreate?: number;
+  onProgress: (jobVersion: number, progress: DraftProgress) => void;
 }) {
   const [data, setData] = useState<State | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,7 +88,6 @@ export function Application({ job, active, autoCreate = 0 }: {
   }, [job.version]);
 
   useEffect(() => {
-    if (!active) return;
     const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     async function refresh() {
@@ -95,7 +97,7 @@ export function Application({ job, active, autoCreate = 0 }: {
       } catch (failure) {
         if (!controller.signal.aborted) {
           setError((failure as Error).message);
-          timer = setTimeout(refresh, 3000);
+          if (active || data?.pending) timer = setTimeout(refresh, 3000);
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);
@@ -104,6 +106,11 @@ export function Application({ job, active, autoCreate = 0 }: {
     void refresh();
     return () => { controller.abort(); clearTimeout(timer); };
   }, [active, load, data?.pending?.id]);
+
+  useEffect(() => {
+    if (!data) return;
+    onProgress(job.version, { profileVersion: run?.profile.version ?? null, pending: busy, failed: !!data.error });
+  }, [busy, data, job.version, onProgress, run]);
 
   async function generate(revision = false) {
     if (!data || lock.current || data.pending) return;

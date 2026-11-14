@@ -6,6 +6,7 @@ import { apiRequest } from "../lib/api";
 import type { Profile } from "../lib/profile";
 import type { ConfirmedJob } from "./job";
 import { Call } from "./call";
+import { SessionFit } from "./fit";
 
 type Fact = { id: string; text: string; evidence: string; source: "chat" | "call"; added: boolean };
 const topics = ["Job requirements", "Personal contribution", "Impact and scale", "Project to highlight", "Cover letter angle"];
@@ -13,9 +14,10 @@ type Chat = {
   job_version: number;
   revision: number;
   topics: Record<string, "covered" | "skipped">;
-  messages: { speaker: "agent" | "user"; text: string }[];
+  messages: { speaker: "agent" | "user"; text: string; topic: string | null }[];
   facts: Fact[];
 };
+export type InterviewProgress = "not-started" | "in-progress" | "finished";
 export type FactApproval = { session: Chat; profile: Profile; previous_profile_version: number };
 
 function request<T>(path: string, method: string, body: object) {
@@ -26,11 +28,13 @@ function request<T>(path: string, method: string, body: object) {
   });
 }
 
-export function Session({ job, active, onApprove, onCreateDrafts }: {
+export function Session({ job, profileVersion, active, onApprove, onCreateDrafts, onProgress }: {
   job: ConfirmedJob;
+  profileVersion: number;
   active: boolean;
   onApprove: (approval: FactApproval) => void;
   onCreateDrafts: () => void;
+  onProgress: (jobVersion: number, progress: InterviewProgress) => void;
 }) {
   const [chat, setChat] = useState<Chat | null>(null);
   const [mode, setMode] = useState<"chat" | "call">("chat");
@@ -45,9 +49,12 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
   const factQueue = useRef(Promise.resolve());
   const source = { job_version: job.version };
   const currentTopic = topics.find(topic => !chat?.topics[topic]);
+  const currentTopicIndex = currentTopic ? topics.indexOf(currentTopic) : -1;
+  const followingTopic = currentTopic ? topics.slice(currentTopicIndex + 1).find(topic => !chat?.topics[topic]) : undefined;
+  const lastPrompt = chat?.messages.at(-1);
+  const chatReady = !!lastPrompt && (lastPrompt.topic ?? undefined) === currentTopic;
 
   useEffect(() => {
-    if (!active) return;
     const controller = new AbortController();
     apiRequest<Chat>("/api/session?job_version=" + job.version, { signal: controller.signal })
       .then(result => {
@@ -58,6 +65,12 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
       .catch(error => { if (!controller.signal.aborted) setError(error.message); });
     return () => controller.abort();
   }, [active, job.version]);
+
+  useEffect(() => {
+    if (!chat) return;
+    const started = chat.revision > 0;
+    onProgress(job.version, !currentTopic ? "finished" : started ? "in-progress" : "not-started");
+  }, [chat, currentTopic, job.version, onProgress]);
 
   async function update<T>(label: string, action: () => Promise<T>, apply: (result: T) => void) {
     if (busyRef.current) return;
@@ -75,7 +88,7 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
   }
 
   function start() {
-    void update("Starting chat…", () => request<Chat>("/start", "POST", source), result => {
+    void update(lastPrompt ? "Loading the current topic…" : "Starting chat…", () => request<Chat>("/start", "POST", source), result => {
       setChat(result);
       requestAnimationFrame(() => input.current?.focus());
     });
@@ -83,7 +96,7 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
 
   function send(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!answer.trim() || !chat) return;
+    if (!answer.trim() || !chat || !chatReady) return;
     void update("JobFather is replying…", () => request<Chat>("/chat", "POST", {
       ...source, revision: chat.revision, answer: answer.trim(),
     }), result => {
@@ -100,7 +113,13 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
     if (!chat || !currentTopic) return;
     void update("Updating interview…", () => request<Chat>("/topics", "POST", {
       ...source, revision: chat.revision, topic: currentTopic, status, mode,
-    }), setChat);
+    }), result => {
+      setChat(current => current && current.revision > result.revision ? current : result);
+      if (mode === "chat") {
+        setAnswer("");
+        requestAnimationFrame(() => lastMessage.current?.scrollIntoView({ block: "nearest" }));
+      }
+    });
   }
 
   function editFact(event: FormEvent<HTMLFormElement>, fact: Fact) {
@@ -141,25 +160,34 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
         <h2>{job.details.role}</h2>
         <p className="hint">{job.details.company}</p>
       </div>
-      <div className="panel session-modes" role="group" aria-label="Session mode">
+      {active && <SessionFit jobVersion={job.version} profileVersion={profileVersion} />}
+      <div className="session-modes" role="group" aria-label="Session mode">
         <button type="button" className="button" aria-pressed={mode === "chat"} onClick={() => setMode("chat")}>Chat</button>
-        <button type="button" className="button" aria-pressed={mode === "call"} onClick={() => setMode("call")}>Call</button>
+        <button type="button" className="button session-call-button" aria-pressed={mode === "call"} onClick={() => setMode("call")}>Call</button>
       </div>
       <section className="panel pane workflow-stack" aria-labelledby="interview-topics">
-        <div className="workflow-row"><h2 id="interview-topics">Interview topics</h2>
-          <span className="hint">{topics.filter(topic => chat?.topics[topic] === "covered").length} of {topics.length} covered</span></div>
-        <ul className="interview-topics">{topics.map(topic => {
+        <div className="workflow-row">
+          <h2 id="interview-topics">Interview topics</h2>
+          <span className="hint">{topics.filter(topic => chat?.topics[topic] === "covered").length} of {topics.length} covered</span>
+        </div>
+        <ol className="interview-topics">{topics.map(topic => {
           const status = chat?.topics[topic];
-          return <li key={topic} aria-current={topic === currentTopic ? "step" : undefined}>
-            <span>{topic}</span><small>{status === "covered" ? "Covered" : status === "skipped" ? "Skipped" : topic === currentTopic ? "Current" : "Open"}</small>
+          return <li key={topic} aria-current={topic === currentTopic ? "step" : undefined} data-status={status}>
+            <span>{topic}</span>
+            <small>{status === "covered" ? "Covered" : status === "skipped" ? "Skipped" : topic === currentTopic ? "In progress" : "Upcoming"}</small>
           </li>;
-        })}</ul>
-        {chat && currentTopic && (mode === "call" || !!chat.messages.length) && <div className="actions">
-          {mode === "call" && <button className="button" type="button" disabled={!!busy} onClick={() => updateTopic("covered")}>Mark topic covered</button>}
-          <button className="button quiet" type="button" disabled={!!busy} onClick={() => updateTopic("skipped")}>Skip topic</button>
+        })}</ol>
+        {chat && currentTopic && <div className="workflow-row interview-next">
+          <p className="hint" aria-live="polite">{followingTopic ? `Up next: ${followingTopic}` : "You’re on the last topic."}</p>
+          <div className="actions">
+            {mode === "call" && <button className="button" type="button" disabled={!!busy} onClick={() => updateTopic("covered")}>Mark covered</button>}
+            <button className="button" type="button" disabled={!!busy} onClick={() => updateTopic("skipped")}>
+              {followingTopic ? "Skip to next topic" : "Skip last topic"}
+            </button>
+          </div>
         </div>}
       </section>
-      <Call active={active && mode === "call"} jobVersion={job.version} onAnswer={captureCallAnswer} />
+      <Call active={active && mode === "call"} jobVersion={job.version} topic={currentTopic} onAnswer={captureCallAnswer} />
       {mode === "chat" && (chat?.messages.length ? <section className="panel session-chat" aria-label="Chat with JobFather">
         <div className="session-messages" role="log" aria-label="Messages">
           {chat.messages.map((message, index) => (
@@ -170,14 +198,16 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
             </div>
           ))}
         </div>
-        <form className="session-composer" onSubmit={send}>
+        {chatReady ? <form className="session-composer" onSubmit={send}>
           <div>
             <label htmlFor="session-answer">Your answer</label>
             <textarea id="session-answer" ref={input} rows={2} maxLength={4000} value={answer} required
               readOnly={!!busy} onChange={event => setAnswer(event.target.value)} />
           </div>
           <button className="button primary" type="submit" disabled={!!busy || !answer.trim()}>Send</button>
-        </form>
+        </form> : <div className="pane">
+          <button className="button primary" type="button" disabled={!!busy} onClick={start}>Continue chat</button>
+        </div>}
       </section> : <div className="panel standalone">
         <p className="hint">Talk about work that’s relevant to this job.</p>
         <button className="button primary" type="button" onClick={start} disabled={!!busy}>Start chat</button>
@@ -216,7 +246,9 @@ export function Session({ job, active, onApprove, onCreateDrafts }: {
         </ul> : <p className="hint fact-empty">No facts yet.</p>}
       </section>
       <div className="form-footer session-next">
-        <p className="hint">Drafts use the facts saved to your profile.</p>
+        {chat && !currentTopic
+          ? <p className="hint success" role="status">Interview topics finished.</p>
+          : <p className="hint">Drafts use the facts saved to your profile.</p>}
         <button className="button primary" type="button" disabled={!!busy || !!editing} onClick={onCreateDrafts}>Create drafts</button>
       </div>
     </div>
