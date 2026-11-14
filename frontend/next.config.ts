@@ -10,11 +10,13 @@ const config: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
   async redirects() {
-    return [{ source: "/app", destination: "/", permanent: false }];
+    return [
+      { source: "/app", destination: "/", permanent: false },
+      { source: "/landing", destination: "/landing/index.html", permanent: false },
+    ];
   },
   async rewrites() {
     return [
-      { source: "/landing", destination: "/landing/index.html" },
       { source: "/api/:path*", destination: backend + "/api/:path*" },
     ];
   },

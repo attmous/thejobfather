@@ -74,7 +74,7 @@
     button.addEventListener('click', async () => {
       const request = ++sampleRequest;
       const kind = button.dataset.sample;
-      const path = `/landing/samples/${kind}.txt`;
+      const path = `./samples/${kind}.txt`;
       button.disabled = true;
       try {
         const response = await fetch(path);

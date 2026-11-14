@@ -6,18 +6,18 @@
   <meta name="theme-color" content="#ffffff">
   <meta name="description" content="Turn your real experience into a tailored job application. Run TheJobFather with Docker, talk through your work, and export a CV and cover letter.">
   <title>TheJobFather — Your experience. Better told.</title>
-  <link rel="icon" href="/landing/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/landing/styles.css">
-  <script src="/landing/script.js" defer></script>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./script.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="#" aria-label="TheJobFather home"><img src="/landing/logo.png" width="142" height="61" alt="TheJobFather"></a>
+    <a class="brand" href="#" aria-label="TheJobFather home"><img src="./logo.png" width="142" height="61" alt="TheJobFather"></a>
     <nav aria-label="Main navigation">
       <a href="#how-it-works">How it works</a><a href="#install">Quick start</a><a href="#judge-guide">Judge’s guide</a>
     </nav>
-    <a class="button small" href="/" data-app-link>Open the app <span aria-hidden="true">↗</span></a>
+    <a class="button small" href="http://localhost:3000/" data-app-link>Open the local app <span aria-hidden="true">↗</span></a>
   </header>
 
   <main id="main">
@@ -100,12 +100,12 @@
     <section class="section-wrap judge-section" id="judge-guide" aria-labelledby="judge-title">
       <div class="section-heading"><div><p class="eyebrow">JUDGE WALKTHROUGH</p><h2 id="judge-title">Test one application<br>from start to finish.</h2></div><p>Evaluating the hackathon build? Follow one fictional candidate from an empty profile to a finished application. No personal CV needed.</p></div>
       <div class="judge-grid">
-        <aside class="sample-card"><span class="sample-badge">SAMPLE FILES</span><div class="sample-avatar" aria-hidden="true">am<span>↗</span></div><h3>Alex Morgan</h3><p>A software engineer applying for a full-stack role at Harbor Studio.</p><div class="sample-files"><button data-sample="resume"><span aria-hidden="true">▤</span><span>Sample resume<small>Plain text · ready to paste</small></span><span aria-hidden="true">↗</span></button><button data-sample="job"><span aria-hidden="true">▤</span><span>Sample job posting<small>Includes an unsupported skill</small></span><span aria-hidden="true">↗</span></button></div><p class="sample-disclaimer">All names, employers, and experience in this kit are fictional. AI responses will vary.</p><a class="text-link" href="/" data-app-link>Open your workspace <span aria-hidden="true">↗</span></a></aside>
+        <aside class="sample-card"><span class="sample-badge">SAMPLE FILES</span><div class="sample-avatar" aria-hidden="true">am<span>↗</span></div><h3>Alex Morgan</h3><p>A software engineer applying for a full-stack role at Harbor Studio.</p><div class="sample-files"><button data-sample="resume"><span aria-hidden="true">▤</span><span>Sample resume<small>Plain text · ready to paste</small></span><span aria-hidden="true">↗</span></button><button data-sample="job"><span aria-hidden="true">▤</span><span>Sample job posting<small>Includes an unsupported skill</small></span><span aria-hidden="true">↗</span></button></div><p class="sample-disclaimer">All names, employers, and experience in this kit are fictional. AI responses will vary.</p><a class="text-link" href="http://localhost:3000/" data-app-link>Open your workspace <span aria-hidden="true">↗</span></a></aside>
         <div class="checklist">
           <div class="checklist-heading"><span>YOUR FIRST APPLICATION</span><span id="checklist-progress" role="status">0 / 5 complete</span></div><div class="progress-track" role="progressbar" aria-label="Walkthrough progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="progress-fill"></span></div>
           <ol>
             <li><input id="check-profile" type="checkbox" data-check="profile"><div><label for="check-profile">Import the sample resume.</label><p>In <strong>Profile → Paste text</strong>, paste the sample resume and choose <strong>Save profile</strong>. Check that Alex’s name and experience are extracted.</p></div></li>
-            <li><input id="check-job" type="checkbox" data-check="job"><div><label for="check-job">Import the sample job.</label><p>In <strong>Job → Paste job description</strong>, paste the sample posting. Select <strong>Extract details</strong>, review the result, then <strong>Start session</strong>.</p></div></li>
+            <li><input id="check-job" type="checkbox" data-check="job"><div><label for="check-job">Import the sample job.</label><p>In <strong>Job → Paste job description</strong>, paste the sample posting. Select <strong>Extract details</strong>, review the result, then choose <strong>Confirm job</strong> to open Session.</p></div></li>
             <li><input id="check-talk" type="checkbox" data-check="talk"><div><label for="check-talk">Add a fact from the conversation.</label><p>Select <strong>Start chat</strong>. Tell JobFather: “For the library app, I redesigned the checkout form after interviewing volunteers.” Review a captured fact and select <strong>Add to profile</strong>.</p><small>Optional: choose Call → Start call, allow your microphone, and try speaking or sharing your project screen.</small></div></li>
             <li><input id="check-drafts" type="checkbox" data-check="drafts"><div><label for="check-drafts">Review the drafts and job fit.</label><p>Choose <strong>Create drafts</strong>. Review <strong>CV</strong>, <strong>Cover letter</strong>, and <strong>Job fit</strong>. Kubernetes should remain a gap unless you add evidence for it.</p></div></li>
             <li><input id="check-export" type="checkbox" data-check="export"><div><label for="check-export">Revise the letter and export PDFs.</label><p>Ask to make the cover letter shorter and select <strong>Revise letter</strong>. Try an earlier version, then download both PDFs and check that their text is selectable.</p></div></li>
@@ -131,7 +131,7 @@
 
   <footer class="site-footer section-wrap"><a href="#" class="footer-brand">TheJobFather<span>Tailored applications from your approved experience.</span></a><div><span>Hackathon edition</span><a href="https://github.com/attmous/thejobfather" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#install">Setup guide ↑</a></div></footer>
 
-  <dialog id="sample-dialog" aria-labelledby="sample-title"><div class="dialog-header"><div><p class="eyebrow">FICTIONAL DEMO MATERIAL</p><h2 id="sample-title">Sample resume</h2></div><button id="close-sample" aria-label="Close sample">×</button></div><p id="sample-instructions">Paste this into the app.</p><pre id="sample-content" tabindex="0"></pre><div class="dialog-actions"><a id="download-sample" class="text-link" href="/landing/samples/resume.txt" download>Download .txt ↓</a><button class="button primary" data-copy="sample-content">Copy text <span aria-hidden="true">⧉</span></button></div></dialog>
+  <dialog id="sample-dialog" aria-labelledby="sample-title"><div class="dialog-header"><div><p class="eyebrow">FICTIONAL DEMO MATERIAL</p><h2 id="sample-title">Sample resume</h2></div><button id="close-sample" aria-label="Close sample">×</button></div><p id="sample-instructions">Paste this into the app.</p><pre id="sample-content" tabindex="0"></pre><div class="dialog-actions"><a id="download-sample" class="text-link" href="./samples/resume.txt" download>Download .txt ↓</a><button class="button primary" data-copy="sample-content">Copy text <span aria-hidden="true">⧉</span></button></div></dialog>
   <div id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>

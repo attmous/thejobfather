@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <strong><a href="https://attmous.github.io/thejobfather/">Landing page</a></strong> ·
   <strong><a href="#quick-start">Quick start</a></strong> ·
   <strong><a href="#try-it-as-a-judge">Judge walkthrough</a></strong> ·
   <a href="#what-you-can-do">Features</a> ·
@@ -81,8 +82,9 @@ both services to become healthy.
 
 ![Animated walkthrough showing how to clone the repo, start Docker Compose, open localhost:3000, and find the Gemini API key field in Settings](docs/images/install-and-run.gif)
 
-The [interactive setup and judge guide](http://localhost:3000/landing) is also
-available locally, with copyable commands and sample materials.
+The [hosted setup and judge guide](https://attmous.github.io/thejobfather/) has
+copyable commands and sample materials. It is also available in your
+[local workspace](http://localhost:3000/landing).
 
 ### 3. Add your key
 
