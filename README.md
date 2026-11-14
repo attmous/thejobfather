@@ -77,6 +77,13 @@ both services to become healthy.
 
 **Open [http://localhost:3000](http://localhost:3000/).**
 
+<details>
+<summary>Watch the 16-second setup walkthrough</summary>
+
+![Animated walkthrough showing how to clone the repo, start Docker Compose, open localhost:3000, and find the Gemini API key field in Settings](docs/images/install-and-run.gif)
+
+</details>
+
 The [interactive setup and judge guide](http://localhost:3000/landing) is also
 available locally, with copyable commands and sample materials.
 
