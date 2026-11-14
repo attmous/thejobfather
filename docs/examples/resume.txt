@@ -1,0 +1,28 @@
+FICTIONAL DEMO PROFILE — use only to evaluate TheJobFather
+
+Alex Morgan
+Software Engineer
+
+Summary
+Software engineer who builds practical tools with Python, React and SQL.
+Enjoys making complex workflows easier for users and collaborating with
+designers and product managers.
+
+Experience
+Software Engineer — Northstar Tools (fictional company), 2022–2025
+- Built a React dashboard for an internal support team.
+- Developed Python APIs to search and update support records.
+- Added automated tests and worked with a designer on accessible forms.
+- Used SQL to investigate user-reported data issues.
+
+Projects
+Community Library App — personal project, 2025
+- Built a book-lending application with React, Python and SQLite.
+- Interviewed volunteers to understand their checkout workflow.
+- Wrote setup instructions so other volunteers could run the app locally.
+
+Skills
+Python, React, TypeScript, SQL, SQLite, Git, automated testing, accessible UI.
+
+Education
+BSc Computer Science, 2022.

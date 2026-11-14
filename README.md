@@ -1,100 +1,162 @@
-# TheJobFather
+<p align="center">
+  <img src="assets/thejobfather-logo.png" alt="TheJobFather" width="320">
+</p>
 
-Hackathon MVP for creating an evidence-backed job application through a live,
-interruptible conversation.
+<h1 align="center">Your experience. Better told.</h1>
 
-The planning baseline is intentionally smaller than the original specification.
-It protects the product's defining loop:
+<p align="center">
+  Turn a conversation about your work into a tailored CV, cover letter, and job-fit analysis.<br>
+  Built with Gemini and Gemini Live. Run it on your own computer with Docker.
+</p>
 
-1. Import real career evidence and a target job.
-2. Discuss relevant experience by chat or call. Share a project screen during a
-   call if it helps.
-3. Review captured facts and add each relevant fact to the profile.
-4. Generate and revise a tailored CV, cover letter, and fit analysis.
-5. Download usable PDFs.
+<p align="center">
+  <strong><a href="#quick-start">Quick start</a></strong> ·
+  <strong><a href="#try-it-as-a-judge">Judge walkthrough</a></strong> ·
+  <a href="#what-you-can-do">Features</a> ·
+  <a href="docs/SETUP.md">Setup & troubleshooting</a>
+</p>
 
-## Planning documents
+---
 
-- [Refined MVP specification](docs/MVP_SPEC.md)
-- [Incremental delivery roadmap](docs/INCREMENTAL_ROADMAP.md)
-- [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
-- [Product decisions to confirm](docs/OPEN_DECISIONS.md)
+## Meet TheJobFather
 
-## Current status
+TheJobFather helps you prepare an application for a specific job using your resume
+and the project details you add through conversation.
 
-In **Profile**, choose a PDF or paste resume text, add optional GitHub and
-LinkedIn profile links, and select **Save profile**.
+Bring your resume and a job posting. Talk through your work by chat or live voice,
+review the facts the conversation uncovers, and turn the facts you approve into
+an application you can edit and download.
 
-In **Job**, import a public link or paste the posting. Gemini fills in the
-role, company, description, and skills for you to review. **Start session** saves the
-confirmed job and opens Session.
+**Profile → Job → Conversation → Approve facts → Application**
 
-In **Session**, start a chat with Gemini about the confirmed job. New facts
-appear in the footer. Edit a fact or add it to the profile individually.
-The chat and fact list are saved with the confirmed job.
+![TheJobFather local workspace: importing a resume and adding profile references](docs/images/workspace.jpg)
 
-Choose **Call** for Gemini Live with captions and optional screen sharing.
-Allow microphone access, then speak naturally to interrupt. Call captions
-stay visible while the Session is open. Final user captions can produce
-proposals in the same saved facts list. Only **Add to profile** saves a fact
-to the profile. The browser sends microphone audio and selected screen frames
-to Gemini using a short-lived token from the backend.
+## What you can do
 
-In **Application**, create a tailored CV, cover letter, and job fit from the saved
-profile and confirmed job. Job fit includes the supporting profile excerpts.
-Choose a letter tone and request a text revision. Each successful draft or revision
-saves a version; the version selector restores an earlier one. Download the CV
-and cover letter as selectable-text PDFs.
+| Start with… | Walk away with… |
+| --- | --- |
+| Your resume PDF or pasted resume text | A saved profile grounded in your own experience. |
+| A public job link or pasted posting | A role, company, and requirements you can review before starting. |
+| A chat or interruptible live voice conversation | Relevant details that may be missing from your CV. Screen sharing is optional. |
+| Facts you review, edit, and approve | Evidence the app can use in your drafts. Unapproved facts stay out. |
+| Your saved profile and confirmed job | A tailored CV, cover letter, and job-fit analysis with supporting excerpts. |
+| Feedback on the cover letter | Revised drafts, version history, and selectable-text CV / cover-letter PDFs. |
 
-Drafts exclude unapproved Session facts. Generation checks source references,
-numbers, skills, and fit requirements, then asks Gemini for a separate consistency
-review. A failed check, changed input, or failed revision keeps the last successful
-version. New profile changes require **Update drafts** before revising the letter.
-Jobs run in the single local backend process; restarting it marks an interrupted
-run as failed and preserves completed versions.
+The app checks source references, numbers, and skills before saving drafts, and
+asks Gemini to perform a consistency review. You still review the final result.
 
-Run the app locally with Node.js 22+ and Python 3.9+. From the repository root:
+## Quick start
 
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r backend/requirements.txt
-```
+### 1. Have these ready
 
-```sh
-.venv/bin/python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
-```
+- **Docker Desktop**, installed **and running**. [Install Docker →](https://docs.docker.com/compose/install/)
+  Linux users can also use Docker Engine with Compose v2.20+.
+- **Git**, or an extracted copy of the source ZIP. [Install Git →](https://git-scm.com/downloads)
+- **A Gemini API key** with access to the configured models and available quota.
+  [Get a key in Google AI Studio →](https://aistudio.google.com/apikey)
+- A browser and internet access. Provider usage limits and charges apply.
 
-In a second terminal:
+Docker includes the app’s Node.js and Python runtime dependencies. You do not need
+to install either locally. On macOS with Homebrew, `brew bundle` installs the
+Docker Desktop prerequisite declared in [Brewfile](Brewfile).
+
+### 2. Start the app
+
+Run in Terminal or PowerShell:
 
 ```sh
-cd frontend
-npm ci
-npm run dev
+git clone https://github.com/attmous/thejobfather.git
+cd thejobfather
+docker compose up --build -d --wait
 ```
 
-Open [TheJobFather](http://127.0.0.1:3000). The app saves the original resume
-and profile links in `data/profile.sqlite3`. Gemini extracts resume information
-for sessions and drafts when you save a new resume. Profile links are saved as
-URLs. A previous resume import can be used for sessions and drafts. Reupload
-it to store a downloadable copy. Use the paste option for a locked PDF.
+Already downloaded the source? Open a terminal in the extracted project folder
+and run only the last command. The first build downloads dependencies. Wait for
+both services to become healthy.
 
-Open **Settings** to save a Gemini key from
-[Google AI Studio](https://aistudio.google.com/app/apikey). The local backend
-stores it in `data/gemini.key` with owner-only file permissions and uses it on
-the next import. Settings returns the key status and never returns the value.
-If no key is saved in Settings, the backend can use `GEMINI_API_KEY` from its
-environment or the Git-ignored `backend/.env`. Set `GEMINI_TEXT_MODEL` there
-to override the default `gemini-3.5-flash-lite`. Restart the backend after
-changing environment settings. Set `GEMINI_LIVE_MODEL` to override the default
-`gemini-3.8-live` if your key requires another compatible Live model.
+**Open [http://localhost:3000](http://localhost:3000/).**
 
-This increment runs on loopback for a single local user. Owner sign-in and
-spoken document revisions are still to be implemented.
+The [interactive setup and judge guide](http://localhost:3000/landing) is also
+available locally, with copyable commands and sample materials.
 
-Run the Application regression checks without a Gemini key:
+### 3. Add your key
+
+In the app, open **Settings → API key**, paste your Gemini key, and choose
+**Save key**. You’re ready to import a resume. No `.env` editing is needed for
+the standard setup.
+
+> **Need help starting?** See [troubleshooting](docs/SETUP.md#troubleshooting)
+> for Docker startup, occupied ports, model access, and import problems.
+
+## Try it as a judge
+
+Use the fictional sample candidate to try the full workflow without supplying
+your own CV. A working Gemini key is required; there is no shared demo key.
+
+**Your test kit:** [Alex Morgan’s resume](docs/examples/resume.txt) ·
+[Harbor Studio’s job posting](docs/examples/job.txt)
+
+Open each sample on GitHub and copy its text using the file’s copy button or
+the **Raw** view. All people, companies, and experience in these files are fictional.
+
+- [ ] **Import a profile.** In **Profile → Paste text**, paste Alex’s resume and
+  choose **Save profile**. Check that Alex’s name and experience appear.
+- [ ] **Choose a job.** In **Job → Paste job description**, paste the sample job.
+  Choose **Extract details**, review the role and company, then **Start session**.
+- [ ] **Uncover a detail.** Choose **Start chat** and try this answer:
+  “For the library app, I redesigned the checkout form after interviewing
+  volunteers.” Review a captured fact, edit it if needed, and choose **Add to profile**.
+- [ ] **Generate the application.** Choose **Create drafts**. Review **CV**,
+  **Cover letter**, and **Job fit**. Kubernetes should remain a gap unless you
+  provide evidence for it; the sample profile does not claim that experience.
+- [ ] **Revise and export.** Ask for a shorter cover letter and choose
+  **Revise letter**. Try an earlier version, then download both PDFs and check
+  that you can select their text.
+
+**Try voice, too:** In Session, choose **Call → Start call**, allow your
+microphone, and speak naturally. Try interrupting or sharing a project screen.
+Review and approve captured facts just as you would in chat. Voice requires
+access to the configured Gemini Live model; the complete draft workflow also
+works through text chat.
+
+AI responses vary. The evaluation is about the full flow, evidence traceability,
+your control over approved facts, and usable exported documents.
+
+## Stop and come back later
 
 ```sh
-.venv/bin/python -m unittest discover -s backend/tests -v
-npm --prefix frontend run typecheck
-npm --prefix frontend run build
+docker compose down
+# Start again when you’re ready:
+docker compose up -d --wait
 ```
+
+Your profile, imported resume, drafts, and saved key persist in a Docker volume.
+**`docker compose down --volumes` deletes that workspace.**
+
+## Your data and the current scope
+
+- **Local workspace, cloud AI.** Saved work stays in a local Docker volume.
+  Gemini receives the resume / job content and conversation context needed for
+  AI features. Calls send microphone audio and any screen frames you choose to share.
+- **Your key, your control.** The local backend saves the key with owner-only file
+  permissions. The UI reports its status without returning the value.
+- **Single-user hackathon build.** The app listens on your computer’s loopback
+  address. It does not submit applications for you. Owner sign-in and spoken
+  document revisions are not included yet.
+- **Profile links are references.** GitHub and LinkedIn URLs can be saved, but
+  their content is not automatically imported as career evidence.
+
+## For builders
+
+The frontend uses **Next.js / React**, the backend uses **Python / FastAPI**,
+and the workspace is stored in **SQLite**. Docker Compose starts both services
+with health checks; the frontend proxies API requests to the backend.
+
+| Resource | What you’ll find |
+| --- | --- |
+| [Setup guide](docs/SETUP.md) | Configuration, troubleshooting, and running without Docker. |
+| [Validation](docs/SETUP.md#validation) | Backend regression tests and an isolated Docker smoke check; no live AI calls required. |
+| [Source ZIP](docs/SETUP.md#package-a-source-zip) | Package the current build for judges without secrets or private data. |
+| [MVP specification](docs/MVP_SPEC.md) | Product scope and intended behavior. |
+| [Roadmap](docs/INCREMENTAL_ROADMAP.md) · [Implementation plan](docs/IMPLEMENTATION_PLAN.md) | Delivery increments and technical planning. |
+| [Open decisions](docs/OPEN_DECISIONS.md) | Product decisions still to confirm. |

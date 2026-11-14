@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="Turn your real experience into a tailored job application. Run TheJobFather with Docker, talk through your work, and export a CV and cover letter.">
+  <title>TheJobFather — Your experience. Better told.</title>
+  <link rel="icon" href="/landing/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/landing/styles.css">
+  <script src="/landing/script.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#" aria-label="TheJobFather home"><img src="/landing/logo.png" width="142" height="61" alt="TheJobFather"></a>
+    <nav aria-label="Main navigation">
+      <a href="#how-it-works">How it works</a><a href="#install">Quick start</a><a href="#judge-guide">Judge’s guide</a>
+    </nav>
+    <a class="button small" href="/" data-app-link>Open the app <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero section-wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> CV AND COVER-LETTER WORKSPACE</p>
+        <h1 id="hero-title">Your experience.<br><em>Better told.</em></h1>
+        <p class="hero-description">Upload your resume and a job posting. Discuss relevant projects, approve the facts, and download a tailored CV and cover letter.</p>
+        <div class="hero-actions"><a class="button primary" href="#install">Run it yourself <span aria-hidden="true">↗</span></a><a class="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a></div>
+        <p class="hero-note">Runs locally with Docker <span>·</span> Requires a Gemini API key</p>
+      </div>
+
+      <div class="preview" aria-label="Illustrative product walkthrough">
+        <div class="preview-top"><span>03 / SESSION</span><span>FICTIONAL EXAMPLE</span></div>
+        <div class="preview-tabs" role="tablist" aria-label="Explore the workflow">
+          <button id="tab-conversation" role="tab" aria-selected="true" aria-controls="panel-conversation" tabindex="0" data-preview="conversation"><span>01</span> Conversation</button>
+          <button id="tab-facts" role="tab" aria-selected="false" aria-controls="panel-facts" tabindex="-1" data-preview="facts"><span>02</span> Your facts</button>
+          <button id="tab-application" role="tab" aria-selected="false" aria-controls="panel-application" tabindex="-1" data-preview="application"><span>03</span> Application</button>
+        </div>
+        <div id="panel-conversation" class="preview-panel" role="tabpanel" aria-labelledby="tab-conversation" tabindex="0">
+          <div class="chat-title"><span class="avatar jf">Jf.</span><div><strong>Discuss your library project.</strong><small>Follow-up question for the target role.</small></div></div>
+          <div class="chat-bubble agent">You built a library app. What changed after talking to the volunteers?</div>
+          <div class="chat-bubble user">They needed fewer steps at checkout, so I redesigned the form around their workflow.</div>
+          <div class="fact-note"><span class="fact-check" aria-hidden="true">✓</span><div><strong>A fact to review</strong><p>Review the wording before adding it to your profile.</p></div></div>
+          <p class="preview-caption">This conversation can continue by text or voice.</p>
+        </div>
+        <div id="panel-facts" class="preview-panel" role="tabpanel" aria-labelledby="tab-facts" tabindex="0" hidden>
+          <p class="eyebrow">CAPTURED FACTS</p><h3>Review what gets saved.</h3>
+          <div class="example-fact"><span class="tag">Proposed fact</span><p>Redesigned the library app’s checkout form based on feedback from volunteers.</p><button class="button small" id="approve-example">Approve this example <span aria-hidden="true">+</span></button></div>
+          <p class="preview-explanation" id="fact-example-status" aria-live="polite">In the app, review or edit each captured fact before choosing “Add to profile.”</p>
+        </div>
+        <div id="panel-application" class="preview-panel" role="tabpanel" aria-labelledby="tab-application" tabindex="0" hidden>
+          <p class="eyebrow">APPLICATION</p><h3>Review your drafts.</h3>
+          <div class="paper-stack"><div class="paper"><span class="paper-label">TAILORED CV</span><h4>Alex Morgan</h4><p>Software Engineer</p><div class="paper-rule"></div><strong>Relevant experience</strong><p>Built a library app with React, Python and SQLite.</p><p>Used volunteer feedback to improve the checkout workflow.</p></div><span class="paper-tab">CV + cover letter</span></div>
+          <p class="preview-explanation">Review your drafts, check the supporting evidence, then download selectable-text PDFs.</p>
+        </div>
+        <div class="preview-footer"><span class="tiny-dot"></span> Interactive example · fictional candidate <span>Try the tabs above ↑</span></div>
+      </div>
+    </section>
+
+    <div class="benefit-strip section-wrap">
+      <p><span aria-hidden="true">↳</span> Import your resume and target job.</p><p><span aria-hidden="true">✳</span> Discuss relevant work by chat or call.</p><p><span aria-hidden="true">✓</span> Approve facts before drafting.</p>
+    </div>
+
+    <section class="section-wrap workflow-section" id="how-it-works" aria-labelledby="workflow-title">
+      <div class="section-heading"><div><p class="eyebrow">THE WORKFLOW</p><h2 id="workflow-title">From resume<br>to application.</h2></div><p>Start with a resume and a specific role. The conversation helps you add relevant experience before generating your drafts.</p></div>
+      <div class="workflow-grid">
+        <article><span class="step-number">01</span><h3>Import your inputs.</h3><p>Upload a resume PDF or paste its text. Add the job you want to apply for, using a public link or the posting itself.</p><span class="step-label">PROFILE + JOB</span></article>
+        <article><span class="step-number">02</span><h3>Discuss your work.</h3><p>Chat or join a live voice call. Explore the projects, decisions, and details that connect your experience to the role.</p><span class="step-label">CHAT OR CALL</span></article>
+        <article><span class="step-number">03</span><h3>Approve the facts.</h3><p>Review the facts captured from your conversation. Edit them, then add the ones you want to your profile.</p><span class="step-label">YOUR APPROVAL</span></article>
+        <article><span class="step-number">04</span><h3>Review and export.</h3><p>Review a tailored CV, cover letter, and job-fit analysis. Refine the letter and download your application PDFs.</p><span class="step-label">REVIEW + EXPORT</span></article>
+      </div>
+      <div class="voice-note"><span class="voice-icon" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><div><h3>Talk through a project.</h3><p>Gemini Live lets you speak naturally, interrupt, and optionally share a project screen. Chat is always another way in.</p></div><a class="text-link" href="#judge-guide">Try a voice session <span aria-hidden="true">↗</span></a></div>
+    </section>
+
+    <section class="install-section" id="install" aria-labelledby="install-title">
+      <div class="section-wrap">
+        <div class="section-heading"><div><p class="eyebrow">RUN LOCALLY</p><h2 id="install-title">Start with Docker.</h2></div><p>Docker installs the app’s Python and Node.js dependencies. Run the commands below, then add your Gemini key in Settings.</p></div>
+        <div class="install-grid">
+          <ol class="install-steps">
+            <li><span>01</span><div><h3>Install Docker and Git.</h3><p>Install and open <a href="https://docs.docker.com/compose/install/" target="_blank" rel="noreferrer">Docker Desktop ↗</a> (or Docker Engine + Compose on Linux). You’ll also need <a href="https://git-scm.com/downloads" target="_blank" rel="noreferrer">Git ↗</a> to clone the project.</p><small>Already have Docker? Make sure its engine is running.</small></div></li>
+            <li><span>02</span><div><h3>Run the commands.</h3><p>Run these commands in Terminal or PowerShell. The first build downloads the app’s dependencies; later starts reuse them.</p><p>When both services are healthy, open <a href="http://localhost:3000/" data-app-link data-app-address>localhost:3000 ↗</a>.</p></div></li>
+            <li><span>03</span><div><h3>Save your Gemini key.</h3><p>Create a key in <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">Google AI Studio ↗</a>. In the app, open <strong>Settings</strong>, paste the key, and select <strong>Save key</strong>.</p><small>AI features need internet access and available API quota. Provider usage limits and charges apply.</small></div></li>
+          </ol>
+          <div class="terminal-column">
+            <div class="terminal">
+              <div class="terminal-header"><span>TERMINAL / POWERSHELL</span><button class="copy-button" data-copy="install-command" aria-label="Copy install commands"><span data-copy-label>Copy commands</span><span aria-hidden="true">⧉</span></button></div>
+              <pre id="install-command"><code><span class="command-line"><span class="command-verb">git clone</span> https://github.com/attmous/thejobfather.git</span>
+<span class="command-line"><span class="command-verb">cd</span> thejobfather</span>
+<span class="command-line command-start"><span class="command-verb">docker compose</span> up --build -d --wait</span></code></pre>
+              <div class="terminal-note">Already cloned? Run the last command from the repository root.</div>
+            </div>
+            <div class="ready-card"><span class="ready-icon" aria-hidden="true">↗</span><div><strong>When both services are healthy</strong><p>Open the app and save your Gemini key in Settings.</p></div><a class="button light" href="http://localhost:3000/" data-app-link>Open app <span aria-hidden="true">↗</span></a></div>
+            <details class="terminal-help"><summary>Stop or restart your workspace <span aria-hidden="true">+</span></summary><p>Stop the containers while keeping your saved work:</p><div class="inline-code"><code id="stop-command">docker compose down</code><button class="copy-button" data-copy="stop-command" aria-label="Copy stop command">Copy</button></div><p>Start them again:</p><div class="inline-code"><code id="restart-command">docker compose up -d --wait</code><button class="copy-button" data-copy="restart-command" aria-label="Copy restart command">Copy</button></div><p>Your profile, drafts, and saved key live in a Docker volume. The <code>--volumes</code> flag on <code>down</code> deletes that data.</p></details>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-wrap judge-section" id="judge-guide" aria-labelledby="judge-title">
+      <div class="section-heading"><div><p class="eyebrow">JUDGE WALKTHROUGH</p><h2 id="judge-title">Test one application<br>from start to finish.</h2></div><p>Evaluating the hackathon build? Follow one fictional candidate from an empty profile to a finished application. No personal CV needed.</p></div>
+      <div class="judge-grid">
+        <aside class="sample-card"><span class="sample-badge">SAMPLE FILES</span><div class="sample-avatar" aria-hidden="true">am<span>↗</span></div><h3>Alex Morgan</h3><p>A software engineer applying for a full-stack role at Harbor Studio.</p><div class="sample-files"><button data-sample="resume"><span aria-hidden="true">▤</span><span>Sample resume<small>Plain text · ready to paste</small></span><span aria-hidden="true">↗</span></button><button data-sample="job"><span aria-hidden="true">▤</span><span>Sample job posting<small>Includes an unsupported skill</small></span><span aria-hidden="true">↗</span></button></div><p class="sample-disclaimer">All names, employers, and experience in this kit are fictional. AI responses will vary.</p><a class="text-link" href="/" data-app-link>Open your workspace <span aria-hidden="true">↗</span></a></aside>
+        <div class="checklist">
+          <div class="checklist-heading"><span>YOUR FIRST APPLICATION</span><span id="checklist-progress" role="status">0 / 5 complete</span></div><div class="progress-track" role="progressbar" aria-label="Walkthrough progress" aria-valuemin="0" aria-valuemax="5" aria-valuenow="0"><span id="progress-fill"></span></div>
+          <ol>
+            <li><input id="check-profile" type="checkbox" data-check="profile"><div><label for="check-profile">Import the sample resume.</label><p>In <strong>Profile → Paste text</strong>, paste the sample resume and choose <strong>Save profile</strong>. Check that Alex’s name and experience are extracted.</p></div></li>
+            <li><input id="check-job" type="checkbox" data-check="job"><div><label for="check-job">Import the sample job.</label><p>In <strong>Job → Paste job description</strong>, paste the sample posting. Select <strong>Extract details</strong>, review the result, then <strong>Start session</strong>.</p></div></li>
+            <li><input id="check-talk" type="checkbox" data-check="talk"><div><label for="check-talk">Add a fact from the conversation.</label><p>Select <strong>Start chat</strong>. Tell JobFather: “For the library app, I redesigned the checkout form after interviewing volunteers.” Review a captured fact and select <strong>Add to profile</strong>.</p><small>Optional: choose Call → Start call, allow your microphone, and try speaking or sharing your project screen.</small></div></li>
+            <li><input id="check-drafts" type="checkbox" data-check="drafts"><div><label for="check-drafts">Review the drafts and job fit.</label><p>Choose <strong>Create drafts</strong>. Review <strong>CV</strong>, <strong>Cover letter</strong>, and <strong>Job fit</strong>. Kubernetes should remain a gap unless you add evidence for it.</p></div></li>
+            <li><input id="check-export" type="checkbox" data-check="export"><div><label for="check-export">Revise the letter and export PDFs.</label><p>Ask to make the cover letter shorter and select <strong>Revise letter</strong>. Try an earlier version, then download both PDFs and check that their text is selectable.</p></div></li>
+          </ol>
+          <div class="checklist-bottom"><p id="checklist-message">Check off steps as you go. Progress stays in this browser.</p><button class="text-button" id="reset-checklist">Reset checklist</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-wrap faq-section" id="questions" aria-labelledby="faq-title">
+      <div class="faq-heading"><p class="eyebrow">SETUP AND DATA</p><h2 id="faq-title">Questions before you start.</h2><p>Key requirements, data storage, and common setup problems.</p><a class="text-link" href="https://github.com/attmous/thejobfather" target="_blank" rel="noreferrer">Explore the source <span aria-hidden="true">↗</span></a></div>
+      <div class="faq-list">
+        <details><summary>Does my data stay on my computer?<span aria-hidden="true">+</span></summary><p>Your workspace is saved locally in a Docker volume. Gemini receives the resume text or PDF, job content, and conversation context needed for AI features. During a call, microphone audio and any screen frames you choose to share are sent to Gemini. This is a local workspace with cloud AI, so it requires internet access.</p></details>
+        <details><summary>Do I need my own API key?<span aria-hidden="true">+</span></summary><p>Yes. Add a Gemini API key in Settings before importing your resume or job. Your key is saved by the local backend with owner-only file permissions. There is no shared demo key. If Gemini reports a key or model error, check access and quota in Google AI Studio. Optional model overrides are documented in the repository’s <code>.env.example</code>.</p></details>
+        <details><summary>Docker is running, but the app won’t open.<span aria-hidden="true">+</span></summary><p>From the project folder, run <code>docker compose ps</code> and <code>docker compose logs --tail=60</code>. Both services should be healthy. If port 3000 is in use, copy <code>.env.example</code> to <code>.env</code>, set <code>JOBFATHER_PORT=3001</code>, run <code>docker compose up -d --wait</code>, and open <code>http://localhost:3001/</code>.</p><p>If Docker can’t connect to its daemon, open Docker Desktop and wait for the engine to start. First builds need internet access to download dependencies.</p></details>
+        <details><summary>What if a PDF, job link, or call doesn’t work?<span aria-hidden="true">+</span></summary><p>Use <strong>Paste text</strong> for an unreadable or locked resume PDF. Use <strong>Paste job description</strong> if a posting needs a login or blocks imports. For voice, allow microphone access on localhost and check that your API key can access the configured Gemini Live model. You can complete the workflow through chat.</p></details>
+        <details><summary>What’s included in this hackathon build?<span aria-hidden="true">+</span></summary><p>Resume and job import, chat, live voice with optional screen sharing, fact approval, tailored drafts, cover-letter revisions, version history, and CV / cover-letter PDF downloads. It is a single-user local app. It does not submit applications for you. Owner sign-in and spoken document revisions are not included yet. GitHub and LinkedIn profile links are saved as references; they are not automatically imported as evidence.</p></details>
+      </div>
+    </section>
+
+    <section class="closing section-wrap"><p class="eyebrow">READY TO TRY IT?</p><h2>Start with your resume<br><em>or the sample files.</em></h2><a class="button primary" href="#install">Start your first application <span aria-hidden="true">↗</span></a></section>
+  </main>
+
+  <footer class="site-footer section-wrap"><a href="#" class="footer-brand">TheJobFather<span>Tailored applications from your approved experience.</span></a><div><span>Hackathon edition</span><a href="https://github.com/attmous/thejobfather" target="_blank" rel="noreferrer">GitHub ↗</a><a href="#install">Setup guide ↑</a></div></footer>
+
+  <dialog id="sample-dialog" aria-labelledby="sample-title"><div class="dialog-header"><div><p class="eyebrow">FICTIONAL DEMO MATERIAL</p><h2 id="sample-title">Sample resume</h2></div><button id="close-sample" aria-label="Close sample">×</button></div><p id="sample-instructions">Paste this into the app.</p><pre id="sample-content" tabindex="0"></pre><div class="dialog-actions"><a id="download-sample" class="text-link" href="/landing/samples/resume.txt" download>Download .txt ↓</a><button class="button primary" data-copy="sample-content">Copy text <span aria-hidden="true">⧉</span></button></div></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

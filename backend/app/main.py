@@ -40,7 +40,11 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="TheJobFather", lifespan=lifespan, docs_url=None, redoc_url=None)
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=["localhost", "127.0.0.1"])
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=[
+    host.strip() for host in os.environ.get(
+        "JOBFATHER_ALLOWED_HOSTS", "localhost,127.0.0.1"
+    ).split(",") if host.strip()
+])
 app.include_router(settings_router)
 app.include_router(job_router)
 app.include_router(session_router)

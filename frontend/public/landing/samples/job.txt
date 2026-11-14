@@ -1,0 +1,22 @@
+FICTIONAL DEMO JOB — this is not an actual vacancy
+
+Full-stack Software Engineer
+Harbor Studio (fictional company)
+
+We build simple software for community organizations. We are looking for
+an engineer who can connect a thoughtful user interface to reliable APIs.
+
+Responsibilities
+- Build accessible React and TypeScript interfaces.
+- Develop and maintain Python APIs.
+- Work with SQL databases and write automated tests.
+- Collaborate with designers and learn from users.
+- Document your work so teammates can run and maintain it.
+
+Required skills
+React, TypeScript, Python, SQL, automated testing, teamwork.
+
+Nice to have
+Production experience with Kubernetes.
+
+Please explain a project you personally built and how feedback influenced it.
